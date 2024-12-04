@@ -6,7 +6,12 @@
 #include <M5_Ethernet.h>  // for LAN
 // #include <M5Module_LAN.h>  // for LAN
 #include <SPI.h>  // for LAN
-
+//
+#include <Arduino.h>
+#include <M5GFX.h>
+#include <M5Unified.h>
+//
+#include "Device/Safety/force_stop_tactile.hpp"
 #include "Device/comm/can_driver.hpp"
 #include "Device/comm/udp_driver.hpp"
 //
@@ -19,7 +24,7 @@
 #define CTRL_TASK_PRIORITY        20  // 2
 // thread time interval
 #define CTRL_TASK_TIME_INTERVAL      100  // 1
-#define MAIN_TASK_TIME_INTERVAL      500  // 20
+#define MAIN_TASK_TIME_INTERVAL      50   // 20
 #define COMM_RECV_TASK_TIME_INTERVAL 50
 // thread stack size
 #define MAIN_STACK_DEPTH      8192
@@ -67,6 +72,10 @@ ControlManager ctrl_manager;
 
 CommCan can_;
 CommUdp udp_;
+ForceStopTactile manual_force_stop_;
+
+M5GFX lcd_;
+M5Canvas canvas(&lcd_);
 
 /*
  * TASK FUNCTIONS
@@ -103,7 +112,8 @@ static void main_task(void *arg) {
      */
     sys_manager.change_sm_initilizing();
     //
-    sys_manager.initialize(&udp_);
+    sys_manager.initialize(MAIN_TASK_TIME_INTERVAL, &udp_);
+    // sys_manager.set_display_lcd(lcd_);
     //
     while (!sys_manager.check_initilized_ctrl_task()) {
         M5_LOGW("Waiting for Control Task Initialization");
@@ -118,6 +128,10 @@ static void main_task(void *arg) {
     while (1) {
         // 1. Get State
         M5_UPDATE();
+
+        sys_manager.set_manual_force_stop_signal(
+            manual_force_stop_.check_force_stop());
+
         // 2. Update
         sys_manager.update();
         M5_LOGI("Main Task Running");
@@ -156,6 +170,10 @@ static void ctrl_task(void *arg) {
 
 void setup(void) {
     M5_BEGIN();
+    // 0. Initialize M5Stack
+    // >> display
+    // lcd_.begin();
+    sys_manager.set_canvas(&canvas);
     M5_LOGI("M5Stack initialized");
 
     // 1. Display Logo
@@ -170,7 +188,6 @@ void setup(void) {
     M5.Display.setTextSize(0.5);
     M5.Display.drawString("Ver. 0.0.1", M5.Display.width() / 2,
                           M5.Display.height() / 2 + 30);
-
     // 2. Initialize Device
     // >> CAN
     can_.init_twai(TX_TWAI_NUM, RX_TWAI_NUM);

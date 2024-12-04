@@ -4,25 +4,28 @@
 
 int ExtCommModule::generate_send_packet() {
     // (機能)ext_send_packet_を生成する
-    if (is_streaming_state) {
-        //
-        if (!is_streaming_state_for_logging) {
-            // ロギング時は圧縮データを送信するため、送信しない
-            set_udp_send_state(outer_control_state_);
-        } else {
-            //
-            auto state_stack_size = control_state_stack_->state_stack_.size();
-            //
-            for (int i = 0; i < state_stack_size; i++) {
-                auto temp_state_data = control_state_stack_->state_stack_.pop();
-                control_state_limited_->compressed_copy(
-                    *(ControlState*)temp_state_data.data);
-                set_udp_send_state(&outer_control_state_limited_);
-            }
+
+    if (inner_system_state_->is_logging) {
+        auto state_stack_size = control_state_stack_->state_stack_.size();
+
+        for (int i = 0; i < state_stack_size; i++) {
+            auto temp_state_data = control_state_stack_->state_stack_.pop();
+            control_state_limited_->compressed_copy(
+                *(ControlState*)temp_state_data.data);
+            set_udp_send_state(&outer_control_state_limited_);
         }
-    } else if (is_requested_state_at_once) {
+    }
+    if (inner_system_state_->is_streaming_state) {
         set_udp_send_state(outer_control_state_);
-        is_requested_state_at_once = false;
+    } else if (inner_system_state_->is_requested_state_at_once) {
+        set_udp_send_state(outer_control_state_);
+        inner_system_state_->is_requested_state_at_once = false;
+    }
+
+    if (!is_prev_logging && inner_system_state_->is_logging) {
+        set_response_cmd_start_logging();
+    } else if (is_prev_logging && !inner_system_state_->is_logging) {
+        set_response_cmd_stop_logging();
     }
 
     // パケットサイズを計算
@@ -127,6 +130,20 @@ void ExtCommModule::reset_udp_send_packet(bool discard_unsent_data) {
     }
 }
 
+void ExtCommModule::set_response_cmd_start_logging() {
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::START_LOGGING;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExtCommModule::set_response_cmd_stop_logging() {
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::STOP_LOGGING;
+    set_udp_send_cmd(&res_cmd);
+}
+
 bool ExtCommModule::recv() {
     auto packet_size = udp_->recv_packet_task(recv_packet_buffer);
     if (packet_size > 0) {
@@ -140,4 +157,5 @@ void ExtCommModule::send() {
     int send_packet_size = generate_send_packet();
     memcpy(send_packet_buffer, &ext_send_packet_, send_packet_size);
     udp_->send_packet_task(send_packet_buffer, send_packet_size);
+    is_prev_logging = inner_system_state_->is_logging;
 }

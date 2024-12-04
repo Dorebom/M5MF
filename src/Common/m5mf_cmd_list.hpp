@@ -2,10 +2,14 @@
 
 enum class M5MF_CMD_LIST : int
 {
+    /*
+     * System Manager Command List 0 - 99
+     */
     /* State machine cmd */
     NONE,
     CHANGE_SM_STABLE,
     CHANGE_SM_READY,
+    CHANGE_SM_REPAIR,
     CHANGE_SM_FORCE_STOP,
     RELEASE_FORCE_STOP,
 
@@ -25,7 +29,11 @@ enum class M5MF_CMD_LIST : int
     CHANGE_SRV_POWER,  // ひとつだけサーボON/OFF
     CHANGE_SRV_CTRLMODE,
 
-    /*  */
+    /*
+     * Control System Command List 100 - 199
+     */
+    CHANGE_MF_ENABLE = 100,
+    CHANGE_MF_STOP,
 
     SERVO_POSITION_CONTROL,
     SERVO_VELOCITY_CONTROL,
