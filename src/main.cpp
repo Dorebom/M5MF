@@ -24,8 +24,8 @@
 #define CTRL_TASK_PRIORITY        20  // 2
 // thread time interval
 #define CTRL_TASK_TIME_INTERVAL      100  // 1
-#define MAIN_TASK_TIME_INTERVAL      50   // 20
-#define COMM_RECV_TASK_TIME_INTERVAL 50
+#define MAIN_TASK_TIME_INTERVAL      20   // 20
+#define COMM_RECV_TASK_TIME_INTERVAL 25
 // thread stack size
 #define MAIN_STACK_DEPTH      8192
 #define CTRL_STACK_DEPTH      8192
@@ -59,7 +59,7 @@ BoardType board_type = BoardType::M5STACK_ATOMS3;
 //  UDP and LAN
 #define UDP_PORT_RECV 50001
 #define UDP_PORT_SEND 50002
-IPAddress destination_ip(192, 168, 8, 116);
+IPAddress destination_ip(192, 168, 8, 143);
 IPAddress ip(192, 168, 8, 217);
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x99};
 
@@ -134,7 +134,7 @@ static void main_task(void *arg) {
 
         // 2. Update
         sys_manager.update();
-        M5_LOGI("Main Task Running");
+        // M5_LOGI("Main Task Running");
         //
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MAIN_TASK_TIME_INTERVAL));
     }
@@ -161,7 +161,7 @@ static void ctrl_task(void *arg) {
 
         // 2. Update
         ctrl_manager.update();
-        M5_LOGI("Control Task Running");
+        // M5_LOGI("Control Task Running");
         //
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CTRL_TASK_TIME_INTERVAL));
     }

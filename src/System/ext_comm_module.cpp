@@ -22,11 +22,26 @@ int ExtCommModule::generate_send_packet() {
         inner_system_state_->is_requested_state_at_once = false;
     }
 
+    /*
+    if (cmd_stack_to_external_system_->cmd_stack_.size() != 0) {
+        auto temp_cmd_data = cmd_stack_to_external_system_->cmd_stack_.pop();
+        set_udp_send_cmd((st_node_cmd*)temp_cmd_data.data);
+    }
+    */
+
+    if (!is_prev_connected_udp && inner_system_state_->is_connected_udp) {
+        set_response_cmd_connect();
+    } else if (is_prev_connected_udp &&
+               !inner_system_state_->is_connected_udp) {
+        set_response_cmd_disconnect();
+    }
+    /*
     if (!is_prev_logging && inner_system_state_->is_logging) {
         set_response_cmd_start_logging();
     } else if (is_prev_logging && !inner_system_state_->is_logging) {
         set_response_cmd_stop_logging();
     }
+    */
 
     // パケットサイズを計算
     if (ext_send_packet_.stack_marker_num > 0) {
@@ -144,6 +159,25 @@ void ExtCommModule::set_response_cmd_stop_logging() {
     set_udp_send_cmd(&res_cmd);
 }
 
+void ExtCommModule::set_response_cmd_connect() {
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::CONNECT;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExtCommModule::set_response_cmd_disconnect() {
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::DISCONNECT;
+    set_udp_send_cmd(&res_cmd);
+}
+
+std::shared_ptr<NodeCmdStack>
+ExtCommModule::get_cmd_stack_to_external_system_ptr() {
+    return cmd_stack_to_external_system_;
+}
+
 bool ExtCommModule::recv() {
     auto packet_size = udp_->recv_packet_task(recv_packet_buffer);
     if (packet_size > 0) {
@@ -157,5 +191,7 @@ void ExtCommModule::send() {
     int send_packet_size = generate_send_packet();
     memcpy(send_packet_buffer, &ext_send_packet_, send_packet_size);
     udp_->send_packet_task(send_packet_buffer, send_packet_size);
+    reset_udp_send_packet(false);
     is_prev_logging = inner_system_state_->is_logging;
+    is_prev_connected_udp = inner_system_state_->is_connected_udp;
 }

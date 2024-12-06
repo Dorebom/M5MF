@@ -48,9 +48,9 @@ MF: Mechanical-Frame
   - [x] ControlManagerからState, Cmd, Stackのメモリ共有
   - [x] LANドライバを食べる
   - [x] 空の状態でRUN
-  - [ ] システム内GUI(display module)
+  - [x] システム内GUI(display module)
     - [x] SMに対応した顔表示を作成
-    - [ ] チラつき防止
+    - [x] チラつき防止
   - [x] 非常停止外部物理ボタン作成
   - [x] コマンドスタックのExecutor作成
   - [x] コマンドリストに対応した実行を作成
@@ -65,25 +65,36 @@ MF: Mechanical-Frame
   - [x] 空の状態でRUN
   - [ ] Servoドライバを作成
     - [ ] M5RollerCANドライバを作成
-    - [ ] Cybergearドライバを作成
+    - [x] Cybergearドライバを作成
   - [ ] コマンドリストに対応した実行を作成
   - [ ] ベース制御技術
   - [ ] コア制御技術
 - 外部システム連携
   - [x] 共通のnode_state, node_cmd, node_state_machineを使用
-  - [x] node_defに固有定数をまとめる
+  - [x] m5mf_defに固有定数をまとめる
   - [x] m5mf用のコマンドリストを作成
 - [ ] 外部システム
   - [ ] RobotAPIノード(B Node)の作成
-    - [ ] 単軸ノードからの移植
-    - [ ] UDPによる通信確認
+    - [x] 単軸ノードからの移植
+    - [x] UDPによる通信確認
+    - [x] Ready -> Stable, Repair -> Stableに移行するようにprocess書いた
+    - [x] 自動的にデバイス(M5MF)とUDP通信を試みるようにprocess書いた
+    - [x] Robot操作ノードと連携(子ノードとして呼び出し)
+    - [ ] Warning処理と復旧処理
+    - [ ] Error処理と復旧処理
   - [ ] Robot操作ノード(B Node)の作成
-    - [ ] Bluetoothゲームパッドノードからの移植
-  - [ ] ノード間連携
+    - [x] Bluetoothゲームパッドノードからの移植(Windows専用ノードになった)
+    - [ ] (操作コマンドが決まったら)パッドボタンを割り当てて操作コマンド生成
+      - [x] Logging
+      - [x] State Stream
+  - [x] ノード間連携
+    - [x] WindowsJoycon -> M5MF API
   - [ ] GUI設計
     - [ ] UDP通信スキーマ作成
     - [ ] 画面実装
-
+‐ [ ] ゲームパッド
+  - [x] 11ボタン -> StateStream START/STOP
+  - [x] 12ボタン -> Logging START/STOP
 
 # TODO
 - 2024.12.3
@@ -99,3 +110,5 @@ MF: Mechanical-Frame
   - [x] システム内GUI(display module)
     - [x] SMに対応した顔表示を作成
   - [x] 非常停止外部物理ボタン作成
+- 2024.12.5
+  - [x] Windows版ゲームパッドノード(B Node)

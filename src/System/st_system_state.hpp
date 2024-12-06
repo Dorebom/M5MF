@@ -2,7 +2,8 @@
 
 #include <string>
 
-#include "Common/node_cmd.hpp"
+// #include "Common/node_cmd.hpp"
+#include "Common/m5mf_cmd_list.hpp"
 
 struct SystemState
 {

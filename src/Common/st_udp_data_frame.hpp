@@ -9,7 +9,7 @@
 // > MAX_STACK_MARKER_NUM * ONE_STACK_SIZE
 #define MAX_STACK_SIZE_AT_ONCE 200
 
-struct ExtDataFrame
+struct UdpDataFrame
 {
     // 固定ヘッダーのデータサイズ
     int data_frame_header_size;  // フレームヘッダーのサイズ[byte]
@@ -28,7 +28,7 @@ struct ExtDataFrame
     // バイナリデータをコピーする配列
     std::uint8_t data[MAX_UDP_SEND_STATE_DATA_SIZE];
 
-    ExtDataFrame(/* args */) {
+    UdpDataFrame(/* args */) {
         data_frame_header_size =
             sizeof(data_frame_header_size) +
             sizeof(fixed_state_header_data_size) +

@@ -11,6 +11,11 @@ private:
     M5Canvas* canvas_;
     M5GFX* lcd_;
 
+    // Flag
+    bool is_prev_heartbeat_high = false;
+    bool is_prev_connected_udp = false;
+    node_state_machine prev_state_machine;
+
 public:
     DisplayModule(/* args */) {
     }
@@ -43,11 +48,15 @@ public:
         canvas_->pushSprite(0, 0);
     }
 
-    void display(bool is_heartbeat_high, node_state* outer_system_state) {
+    void display(bool is_heartbeat_high, node_state* outer_system_state,
+                 SystemState* inner_system_state) {
         // Display
         M5.Display.setTextSize(1);
-        M5.Lcd.fillRect(20, 50, 80, 40, BLACK);
-        if (is_heartbeat_high) {
+        // >> Face
+        if ((is_heartbeat_high && !is_prev_heartbeat_high) ||
+            prev_state_machine !=
+                outer_system_state->state_code.state_machine) {
+            M5.Lcd.fillRect(20, 50, 80, 40, BLACK);
             switch (outer_system_state->state_code.state_machine) {
                 case node_state_machine::INITIALIZING:
                     M5.Display.setTextColor(WHITE);
@@ -77,10 +86,28 @@ public:
                 default:
                     break;
             }
-        } else {
+        } else if (!is_heartbeat_high && is_prev_heartbeat_high) {
+            M5.Lcd.fillRect(20, 50, 80, 40, BLACK);
             M5.Display.drawString("- _ -", M5.Display.width() / 2,
                                   M5.Display.height() / 2);
         }
+        // >> Connecting State
+        if (inner_system_state->is_connected_udp && !is_prev_connected_udp) {
+            M5.Display.setTextColor(CYAN);
+            M5.Display.drawString("M5MF", M5.Display.width() / 2,
+                                  M5.Display.height() / 2 - 30);
+            M5.Display.setTextColor(GREEN);
+        } else if (!inner_system_state->is_connected_udp &&
+                   is_prev_connected_udp) {
+            M5.Display.setTextColor(WHITE);
+            M5.Display.drawString("M5MF", M5.Display.width() / 2,
+                                  M5.Display.height() / 2 - 30);
+            M5.Display.setTextColor(GREEN);
+        }
+
+        is_prev_heartbeat_high = is_heartbeat_high;
+        is_prev_connected_udp = inner_system_state->is_connected_udp;
+        prev_state_machine = outer_system_state->state_code.state_machine;
     }
     void reset_display() {
         M5.Display.setTextColor(GREEN);

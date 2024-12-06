@@ -37,6 +37,8 @@ bool SystemManager::initialize(int time_interval, CommUdp* udp) {
     heartbeat_.set_system_time_interval(time_interval);
 
     execute_module_.initialize(&outer_system_state_, inner_system_state_);
+    execute_module_.set_cmd_stack(
+        ext_comm_.get_cmd_stack_to_external_system_ptr());
 
     return true;
 }
@@ -58,7 +60,8 @@ void SystemManager::update() {
     // 4. Display
     // >> >> >> >> NOTE: Display is not implemented yet << << << <<
     // display_.display();
-    display_.display(is_heartbeat_high, &outer_system_state_);
+    display_.display(is_heartbeat_high, &outer_system_state_,
+                     inner_system_state_);
 
     // 5. Send External System
     ext_comm_.send();
@@ -109,6 +112,7 @@ void SystemManager::cmd_executor() {
         cmd = sys_cmd_stack->cmd_stack_.pop();
 
         inner_system_state_->act_cmd_type = cmd.cmd_code.cmd_type;
+        M5_LOGI("Act Cmd Type: %d", (int)inner_system_state_->act_cmd_type);
         if ((int)cmd.cmd_code.cmd_type < 100) {
             execute_module_.execute(inner_system_state_->act_cmd_type, &cmd);
         } else {

@@ -1,5 +1,7 @@
 #include "execute_module.hpp"
 
+#include "Service/logger.hpp"
+
 void ExecuteModule::execute(M5MF_CMD_LIST cmd_type, st_node_cmd* cmd) {
     if ((int)cmd_type >= 100) {
         return;
@@ -35,16 +37,42 @@ void ExecuteModule::execute(M5MF_CMD_LIST cmd_type, st_node_cmd* cmd) {
             break;
         case M5MF_CMD_LIST::START_LOGGING:
             start_logging();
+            set_response_cmd_start_logging();
             break;
         case M5MF_CMD_LIST::STOP_LOGGING:
             stop_logging();
+            set_response_cmd_stop_logging();
             break;
         case M5MF_CMD_LIST::REQUEST_STATE:
             request_state();
             break;
+        case M5MF_CMD_LIST::CONNECT:
+            connect();
+            set_response_cmd_connect();
+            break;
+        case M5MF_CMD_LIST::DISCONNECT:
+            disconnect();
+            set_response_cmd_disconnect();
+            break;
         default:
             break;
     }
+}
+
+void ExecuteModule::connect() {
+    if (outer_system_state_->state_code.state_machine ==
+        node_state_machine::INITIALIZING) {
+        return;
+    }
+    inner_system_state_->is_connected_udp = true;
+}
+
+void ExecuteModule::disconnect() {
+    if (outer_system_state_->state_code.state_machine ==
+        node_state_machine::INITIALIZING) {
+        return;
+    }
+    inner_system_state_->is_connected_udp = false;
 }
 
 void ExecuteModule::change_sm_force_stop() {
@@ -144,4 +172,46 @@ void ExecuteModule::request_state() {
         return;
     }
     inner_system_state_->is_requested_state_at_once = true;
+}
+
+/*
+ *   <<- <<- <<- Executing Function
+ *
+ *
+ *   Send cmd to External System ->> ->> ->>
+ */
+
+void ExecuteModule::set_response_cmd_connect() {  // NO Data Struct
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::CONNECT;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExecuteModule::set_response_cmd_disconnect() {  // NO Data Struct
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::DISCONNECT;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExecuteModule::set_response_cmd_start_logging() {  // NO Data Struct
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::START_LOGGING;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExecuteModule::set_response_cmd_stop_logging() {  // NO Data Struct
+    st_node_cmd res_cmd;
+    res_cmd.default_init();
+    res_cmd.cmd_code.cmd_type = M5MF_CMD_LIST::STOP_LOGGING;
+    set_udp_send_cmd(&res_cmd);
+}
+
+void ExecuteModule::set_udp_send_cmd(st_node_cmd* cmd) {
+    if (!is_obtained_cmd_stack_to_external_system) {
+        return;
+    }
+    cmd_stack_to_external_system->cmd_stack_.push(*cmd);
 }

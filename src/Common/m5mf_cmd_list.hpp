@@ -6,7 +6,7 @@ enum class M5MF_CMD_LIST : int
      * System Manager Command List 0 - 99
      */
     /* State machine cmd */
-    NONE,
+    NONE = 0,
     CHANGE_SM_STABLE,
     CHANGE_SM_READY,
     CHANGE_SM_REPAIR,
@@ -14,6 +14,8 @@ enum class M5MF_CMD_LIST : int
     RELEASE_FORCE_STOP,
 
     /* System manager cmd */
+    CONNECT,     // UDP接続, data structナシ
+    DISCONNECT,  // UDP切断, data structナシ
     REQUEST_STATE,
     START_STREAM_STATE,
     STOP_STREAM_STATE,

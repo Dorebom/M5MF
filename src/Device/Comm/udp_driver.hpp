@@ -36,7 +36,7 @@ public:
     bool init_lan(uint8_t cs, uint8_t rst, uint8_t int_pin, byte* mac);
     void set_udp_info(IPAddress local_ip_, IPAddress destination_ip_,
                       uint32_t recv_port_, uint32_t send_port_);
+    void set_destination_info(IPAddress destination_ip_, uint32_t send_port_);
     void send_packet_task(const uint8_t* packet, size_t size);
     uint32_t recv_packet_task(uint8_t* packet);
-    bool callback(std::string& send_packet, std::string& recv_packet);
 };

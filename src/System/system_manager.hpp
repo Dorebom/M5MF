@@ -3,8 +3,8 @@
 #include <memory>
 
 // Common Shared System
+#include "Common/m5mf_def.hpp"
 #include "Common/node_cmd.hpp"
-#include "Common/node_def.hpp"
 #include "Common/node_state.hpp"
 // System
 #include "st_system_state.hpp"
@@ -36,10 +36,10 @@ private:
     ControlState* inner_control_state_;
 
     // >> Stack
-    std::shared_ptr<NodeCmdStack> sys_cmd_stack;
-    std::shared_ptr<NodeCmdStack> ctrl_cmd_stack;
+    std::shared_ptr<NodeCmdStack> sys_cmd_stack;   // 持ち物
+    std::shared_ptr<NodeCmdStack> ctrl_cmd_stack;  // 借り物
     // // 外部通信用
-    std::shared_ptr<NodeStateStack> control_state_stack_;
+    std::shared_ptr<NodeStateStack> control_state_stack_;  // 借り物
 
     // >> Flag
     bool is_init_main_task = false;

@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "Common/m5mf_def.hpp"
 #include "Common/node_cmd.hpp"
-#include "Common/node_def.hpp"
 #include "Common/node_state.hpp"
 //
 #include "Control/st_control_state.hpp"

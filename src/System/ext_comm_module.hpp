@@ -4,7 +4,7 @@
 
 #include "Common/node_cmd.hpp"
 #include "Common/node_state.hpp"
-#include "System/st_ext_data_frame.hpp"
+#include "Common/st_udp_data_frame.hpp"
 #include "System/st_system_state.hpp"
 //
 #include "Control/st_control_state.hpp"
@@ -18,9 +18,10 @@ private:
     CommUdp* udp_;
 
     /* data */
-    std::shared_ptr<NodeCmdStack> sys_cmd_stack_;
+    std::shared_ptr<NodeCmdStack> sys_cmd_stack_;  // 借り物
     // // 外部通信用
-    std::shared_ptr<NodeStateStack> control_state_stack_;
+    std::shared_ptr<NodeStateStack> control_state_stack_;         // 借り物
+    std::shared_ptr<NodeCmdStack> cmd_stack_to_external_system_;  // 持ち物
 
     node_state* outer_system_state_;
     node_state* outer_control_state_;
@@ -33,13 +34,14 @@ private:
     uint8_t send_packet_buffer[UDP_SEND_PACKET_MAX_SIZE];
     uint8_t recv_packet_buffer[UDP_RECV_PACKET_MAX_SIZE];
     // for udp
-    ExtDataFrame ext_send_packet_;  // TODO node class への移植
+    UdpDataFrame ext_send_packet_;  // TODO node class への移植
     uint8_t unsent_data[MAX_STACK_SIZE_AT_ONCE];  // TODO node class への移植
     int unsent_stack_marker = 0;  // TODO node class への移植
 
     // >> Flag
     bool is_unsent_data = false;  // For UDP
     bool is_prev_logging = false;
+    bool is_prev_connected_udp = false;
 
     // >> Function
     int generate_send_packet();
@@ -48,6 +50,8 @@ private:
     void reset_udp_send_packet(bool discard_unsent_data);
     void set_response_cmd_start_logging();
     void set_response_cmd_stop_logging();
+    void set_response_cmd_connect();
+    void set_response_cmd_disconnect();
 
 public:
     ExtCommModule() {
@@ -56,6 +60,9 @@ public:
             sizeof(ControlStateLimited);
         control_state_limited_ =
             (ControlStateLimited*)outer_control_state_limited_.data;
+
+        cmd_stack_to_external_system_ =
+            std::make_shared<NodeCmdStack>(MAX_NODE_CMD_STACK_SIZE);
     };
     ~ExtCommModule() {};
     bool initialize(std::shared_ptr<NodeCmdStack> sys_cmd_stack,
@@ -71,6 +78,9 @@ public:
         udp_ = udp;
         return true;
     }
+
+    std::shared_ptr<NodeCmdStack> get_cmd_stack_to_external_system_ptr();
+
     bool recv();
     void send();
 };

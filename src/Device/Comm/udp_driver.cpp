@@ -65,6 +65,11 @@ bool CommUdp::init_lan(uint8_t cs, uint8_t rst, uint8_t int_pin, byte* mac) {
         }
     }
     M5DEV_LOGI("(STEP 3)Ethernet cable is connected.");
+
+    // Serial IP Address
+    M5_LOGI("IP Address: %s", lan_.localIP().toString().c_str());
+    // Serial Gateway IP Address
+    M5_LOGI("Gateway IP: %s", lan_.gatewayIP().toString().c_str());
     return true;
 }
 
@@ -77,6 +82,12 @@ void CommUdp::set_udp_info(IPAddress local_ip_, IPAddress destination_ip_,
 
     udp_.begin(UDP_PORT_RECV);
     M5_LOGI("UDP initialized");
+}
+
+void CommUdp::set_destination_info(IPAddress destination_ip_,
+                                   uint32_t send_port_) {
+    destination_ip = destination_ip_;
+    UDP_PORT_SEND = send_port_;
 }
 
 void CommUdp::send_packet_task(const uint8_t* packet, size_t size) {
@@ -97,8 +108,4 @@ uint32_t CommUdp::recv_packet_task(uint8_t* packet) {
     }
 
     return 0;
-}
-
-bool CommUdp::callback(std::string& send_packet, std::string& recv_packet) {
-    return false;
 }
