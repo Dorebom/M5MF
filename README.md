@@ -92,9 +92,9 @@ MF: Mechanical-Frame
   - [ ] GUI設計
     - [ ] UDP通信スキーマ作成
     - [ ] 画面実装
-‐ [ ] ゲームパッド
-  - [x] 11ボタン -> StateStream START/STOP
-  - [x] 12ボタン -> Logging START/STOP
+  ‐ [ ] ゲームパッド
+    - [x] 11ボタン -> StateStream START/STOP
+    - [x] 12ボタン -> Logging START/STOP
 
 # TODO
 - 2024.12.3
