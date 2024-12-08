@@ -92,7 +92,14 @@ MF: Mechanical-Frame
   - [ ] GUI設計
     - [ ] UDP通信スキーマ作成
     - [ ] 画面実装
-  ‐ [ ] ゲームパッド
+	‐ [ ] ゲームパッド
+		- [ ] (MF)Control mode 変更
+		- [ ] (非MF)Control Mode 変更
+    - [ ] Mechanical Frame 変更
+		- [ ] Servo ON/OFF
+		- [ ] Force Stop / Release Force Stop
+		- [ ] Speed Up / Down
+		- [ ] 
     - [x] 11ボタン -> StateStream START/STOP
     - [x] 12ボタン -> Logging START/STOP
 
