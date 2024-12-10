@@ -63,6 +63,8 @@ public:
 
         cmd_stack_to_external_system_ =
             std::make_shared<NodeCmdStack>(MAX_NODE_CMD_STACK_SIZE);
+        cmd_stack_to_external_system_->cmd_stack_.set_name(
+            "cmd_stack_to_external_system_");
     };
     ~ExtCommModule() {};
     bool initialize(std::shared_ptr<NodeCmdStack> sys_cmd_stack,

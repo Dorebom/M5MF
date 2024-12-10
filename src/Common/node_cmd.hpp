@@ -59,6 +59,7 @@ private:
 public:
     circular_stacker<st_node_cmd> cmd_stack_;
     NodeCmdStack(size_t stack_size) : cmd_stack_(stack_size) {
+        cmd_stack_.set_name("NodeCmdStack");
     }
     ~NodeCmdStack() {
     }

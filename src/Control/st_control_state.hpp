@@ -1,115 +1,140 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 
 #include "Common/node_cmd.hpp"
 #include "li_ctrl_mode.hpp"
+#include "li_mechanical_frame.hpp"
+
+#define MAX_CONTROL_STATE_DATA_SIZE 150
+
+struct ControlStateCode
+{
+    //
+    MECHANICAL_FRAME_LIST mf_type;
+    CTRL_MODE_LIST ctrl_mode;
+    //
+    unsigned long timestamp;
+    bool is_force_stop;
+    bool is_connecting_device;
+    bool is_power_on;
+    uint8_t data_size;  // * 4 byte
+
+    ControlStateCode() {
+        init();
+    }
+
+    void init() {
+        mf_type = MECHANICAL_FRAME_LIST::NONE;
+        ctrl_mode = CTRL_MODE_LIST::STAY;
+        timestamp = 0;
+        is_force_stop = false;
+        is_connecting_device = false;
+        is_power_on = false;
+        data_size = 0;
+    }
+
+    void deepcopy(const ControlStateCode& state) {
+        mf_type = state.mf_type;
+        ctrl_mode = state.ctrl_mode;
+        timestamp = state.timestamp;
+        is_force_stop = state.is_force_stop;
+        is_connecting_device = state.is_connecting_device;
+        is_power_on = state.is_power_on;
+        data_size = state.data_size;
+    }
+};
 
 struct ControlState
 {
-    bool is_init_scale;
-    bool is_power_on;
-    bool act_can_connection_status;
-    bool is_init_joint_pos;
-    unsigned long timestamp;
-
-    int servo_id;
-    CTRL_MODE_LIST ctrl_mode;
-    double act_joint_position;
-    double act_joint_velocity;
-    double act_joint_torque;
-
-    double cmd_joint_position;
-    double cmd_joint_velocity;
-    double cmd_joint_torque;
-    double cmd_joint_current;
-
-    double act_joint_position_0;
-    double act_joint_velocity_0;
-    double act_joint_torque_0;
-
-    // for control
-    double sum_error_vel;
-    double sum_error_torque;
-
-    double prev_joint_position;
-    double torque_coeff;
-
-    // servo info
-
-    float sensor_weight;
-    int32_t sensor_weight_raw_adc;
-
-    int waiting_servo_id;
-    int dummy2;
+    ControlStateCode state_code;
+    std::uint8_t data[MAX_CONTROL_STATE_DATA_SIZE];
 
     ControlState() {
         init();
     }
 
     void init() {
-        // >> Servo
-        act_can_connection_status = false;
-        servo_id = 0;  // 0: not used, 1: servo1, 2: servo2
-        is_init_joint_pos = false;
-        is_power_on = false;
-        ctrl_mode = CTRL_MODE_LIST::STAY;
-        timestamp = 0;
-
-        // >> weight scale
-        is_init_scale = false;
-        sensor_weight = 0.0f;
-        sensor_weight_raw_adc = 0.0;
-
-        act_joint_position = 0.0;
-        prev_joint_position = 0.0;
-        act_joint_velocity = 0.0;
-        act_joint_torque = 0.0;
-
-        cmd_joint_position = 0.0;
-        cmd_joint_velocity = 0.0;
-        cmd_joint_torque = 0.0;
-        cmd_joint_current = 0.0;
-
-        act_joint_position_0 = 0.0;
-        act_joint_velocity_0 = 0.0;
-        act_joint_torque_0 = 0.0;
-
-        sum_error_vel = 0.0;
-        torque_coeff = 0.0;
-
-        dummy2 = 0x2525;
+        state_code.init();
     }
 
     void deepcopy(const ControlState& state) {
-        // >> Servo
-        act_can_connection_status = state.act_can_connection_status;
-        servo_id = state.servo_id;
-        is_init_joint_pos = state.is_init_joint_pos;
-        is_power_on = state.is_power_on;
-        ctrl_mode = state.ctrl_mode;
-        timestamp = state.timestamp;
+        state_code.deepcopy(state.state_code);
+        memcpy(data, state.data, state_code.data_size);
+    }
+};
 
-        // >> weight scale
-        is_init_scale = state.is_init_scale;
-        sensor_weight = state.sensor_weight;
-        sensor_weight_raw_adc = state.sensor_weight_raw_adc;
+struct MF1_State
+{
+    double act_joint_position[3];
+    double act_joint_velocity[3];
+    double act_joint_torque[3];
 
-        act_joint_position = state.act_joint_position;
-        act_joint_velocity = state.act_joint_velocity;
-        act_joint_torque = state.act_joint_torque;
+    double cmd_joint_value[3];
 
-        cmd_joint_position = state.cmd_joint_position;
-        cmd_joint_velocity = state.cmd_joint_velocity;
-        cmd_joint_torque = state.cmd_joint_torque;
-        cmd_joint_current = state.cmd_joint_current;
+    MF1_State() {
+        init();
+    }
 
-        act_joint_position_0 = state.act_joint_position_0;
-        act_joint_velocity_0 = state.act_joint_velocity_0;
-        act_joint_torque_0 = state.act_joint_torque_0;
+    void init() {
+        for (int i = 0; i < 3; i++) {
+            act_joint_position[i] = 0.0;
+            act_joint_velocity[i] = 0.0;
+            act_joint_torque[i] = 0.0;
+            cmd_joint_value[i] = 0.0;
+        }
+    }
 
-        sum_error_vel = state.sum_error_vel;
+    void deepcopy(const MF1_State& state) {
+        for (int i = 0; i < 3; i++) {
+            act_joint_position[i] = state.act_joint_position[i];
+            act_joint_velocity[i] = state.act_joint_velocity[i];
+            act_joint_torque[i] = state.act_joint_torque[i];
+            cmd_joint_value[i] = state.cmd_joint_value[i];
+        }
+    }
+};
 
-        torque_coeff = state.torque_coeff;
+struct MF2_State
+{
+    double act_joint_position[3];
+    double act_joint_velocity[3];
+    double act_joint_torque[3];
+    double act_mf_position[3];  // 0: x, 1: y, 2: rz
+    double act_mf_velocity[3];  // 0: dx, 1: dy, 2: drz
+    double act_mf_torque[3];    // 0: fx, 1: fy, 2: mz
+
+    double cmd_mf_value[3];     // 0: x, 1: y, 2: rz
+    double cmd_joint_value[3];  // 0: j1, 1: j2, 2: j3
+
+    MF2_State() {
+        init();
+    }
+
+    void init() {
+        for (int i = 0; i < 3; i++) {
+            act_joint_position[i] = 0.0;
+            act_joint_velocity[i] = 0.0;
+            act_joint_torque[i] = 0.0;
+            act_mf_position[i] = 0.0;
+            act_mf_velocity[i] = 0.0;
+            act_mf_torque[i] = 0.0;
+            cmd_mf_value[i] = 0.0;
+            cmd_joint_value[i] = 0.0;
+        }
+    }
+
+    void deepcopy(const MF2_State& state) {
+        for (int i = 0; i < 3; i++) {
+            act_joint_position[i] = state.act_joint_position[i];
+            act_joint_velocity[i] = state.act_joint_velocity[i];
+            act_joint_torque[i] = state.act_joint_torque[i];
+            act_mf_position[i] = state.act_mf_position[i];
+            act_mf_velocity[i] = state.act_mf_velocity[i];
+            act_mf_torque[i] = state.act_mf_torque[i];
+            cmd_mf_value[i] = state.cmd_mf_value[i];
+            cmd_joint_value[i] = state.cmd_joint_value[i];
+        }
     }
 };

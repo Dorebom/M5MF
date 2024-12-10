@@ -177,3 +177,29 @@ bool CanServoDriver::torque_control(uint8_t joint_id, double target_torque) {
     }
     return false;
 }
+
+void CanServoDriver::get_joint_state(uint8_t joint_id, ServoState& state) {
+    if (servo_map_.find(joint_id) == servo_map_.end()) {
+        return;
+    } else {
+        ServoTypeInfo info = servo_map_[joint_id];
+
+        switch (info.type) {
+            case CanServoType::M5ROLLER:
+                // m5roller_driver.get_joint_state(info.can_id, state);
+                break;
+            case CanServoType::CYBERGEAR:
+                state.act_joint_position =
+                    cybergear_status[info.can_id].act_position;
+                state.act_joint_velocity =
+                    cybergear_status[info.can_id].act_velocity;
+                state.act_joint_torque =
+                    cybergear_status[info.can_id].act_effort;
+                state.act_temperature =
+                    cybergear_status[info.can_id].act_temperature;
+                break;
+            default:
+                break;
+        }
+    }
+}

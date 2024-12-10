@@ -41,6 +41,8 @@ private:
     void start_stream_state();
     void stop_stream_state();
     void request_state();
+    // >> Control System
+    void stop_control_system();
 
     /*
      * Send cmd to External System

@@ -8,12 +8,17 @@ template <typename T>
 class circular_stacker {
 public:
     circular_stacker(size_t size) : size_(size), buffer_(size) {
-        head_ = tail_ = count_ = 0;
+        head_ = tail_ = count_ = newest_ = 0;
         is_overwrite_ = false;
     }
 
     ~circular_stacker() {
         buffer_.clear();
+    }
+
+    // スタックの名前を設定
+    void set_name(std::string name) {
+        name_ = name;
     }
 
     // 要素を追加
@@ -22,6 +27,7 @@ public:
 
         if (is_overwrite_) {
             buffer_[tail_] = value;
+            newest_ = tail_;
             tail_ = (tail_ + 1) % size_;
             if (count_ < size_) {
                 count_++;
@@ -35,6 +41,7 @@ public:
                 count_++;
             } else {
                 std::cerr
+                    << name_.c_str()
                     << "Circular stacker is full. Cannot push more elements."
                     << std::endl;
             }
@@ -50,31 +57,34 @@ public:
             count_--;
             return value;
         } else {
-            std::cerr << "Circular stacker is empty. Cannot pop elements."
+            std::cerr << name_.c_str()
+                      << "Circular stacker is empty. Cannot pop elements."
                       << std::endl;
             return T();  // デフォルト値を返す
         }
     }
 
     // 先頭の要素を取得
-    T front() const {
+    T front() {
         std::lock_guard<std::mutex> lock(mtx_);
         if (count_ > 0) {
             return buffer_[head_];
         } else {
-            std::cerr << "Circular stacker is empty. Cannot get front element."
+            std::cerr << name_.c_str()
+                      << "Circular stacker is empty. Cannot get front element."
                       << std::endl;
             return T();  // デフォルト値を返す
         }
     }
 
     // 末尾の要素を取得
-    T back() const {
+    T back() {
         std::lock_guard<std::mutex> lock(mtx_);
         if (count_ > 0) {
-            return buffer_[tail_];
+            return buffer_[newest_];
         } else {
-            std::cerr << "Circular stacker is empty. Cannot get back element."
+            std::cerr << name_.c_str()
+                      << "Circular stacker is empty. Cannot get back element."
                       << std::endl;
             return T();  // デフォルト値を返す
         }
@@ -93,7 +103,7 @@ public:
     // スタックをクリア
     void clear() {
         std::lock_guard<std::mutex> lock(mtx_);
-        head_ = tail_ = count_ = 0;
+        head_ = tail_ = count_ = newest_ = 0;
     }
 
     void change_overwrite_mode(bool is_overwrite) {
@@ -105,7 +115,9 @@ private:
     std::vector<T> buffer_;
     size_t head_;
     size_t tail_;
+    size_t newest_;  // 最新の要素の位置
     size_t count_;
     std::mutex mtx_;
     bool is_overwrite_;
+    std::string name_;
 };

@@ -1,24 +1,27 @@
 #pragma once
 
+#include <memory>
+
+#include "Common/m5mf_def.hpp"
+#include "servo_def.hpp"
 #include "st_control_state.hpp"
 
 struct ControlStateLimited
 {
-    uint8_t servo_id;
-    uint8_t ctrl_mode;
-    bool is_power_on;
-    bool dummy[1];
-
+    MECHANICAL_FRAME_LIST mf_type;
+    CTRL_MODE_LIST ctrl_mode;
+    //
     unsigned long timestamp;
+    bool is_force_stop;
+    bool is_connecting_device;
+    bool is_power_on;
+    bool dummy1;
 
-    float act_joint_position;
-    float act_joint_velocity;
-    float act_joint_torque;
+    float act_joint_position[SERVO_NUM];
+    float act_joint_velocity[SERVO_NUM];
+    float act_joint_torque[SERVO_NUM];
 
-    float cmd_joint_position;
-    float cmd_joint_velocity;
-    float cmd_joint_torque;
-    float cmd_joint_current;
+    float cmd_joint_position[SERVO_NUM];
     float dummy2;
 
     ControlStateLimited() {
@@ -26,32 +29,51 @@ struct ControlStateLimited
     }
 
     void init() {
-        servo_id = 0;
-        ctrl_mode = 0;
-        is_power_on = false;
-
+        mf_type = MECHANICAL_FRAME_LIST::NONE;
+        ctrl_mode = CTRL_MODE_LIST::STAY;
         timestamp = 0;
+        is_force_stop = false;
+        is_connecting_device = false;
+        is_power_on = false;
+        dummy1 = 0;
 
-        act_joint_position = 0.0;
-        act_joint_velocity = 0.0;
-        act_joint_torque = 0.0;
-        cmd_joint_position = 0.0;
-        cmd_joint_velocity = 0.0;
-        cmd_joint_torque = 0.0;
-        cmd_joint_current = 0.0;
+        for (int i = 0; i < SERVO_NUM; i++) {
+            act_joint_position[i] = 0.0;
+            act_joint_velocity[i] = 0.0;
+            act_joint_torque[i] = 0.0;
+            cmd_joint_position[i] = 0.0;
+        }
     }
 
     void compressed_copy(ControlState& state) {
-        servo_id = state.servo_id;
-        ctrl_mode = static_cast<uint8_t>(state.ctrl_mode);
-        is_power_on = state.is_power_on;
-        timestamp = state.timestamp;
-        act_joint_position = state.act_joint_position;
-        act_joint_velocity = state.act_joint_velocity;
-        act_joint_torque = state.act_joint_torque;
-        cmd_joint_position = state.cmd_joint_position;
-        cmd_joint_velocity = state.cmd_joint_velocity;
-        cmd_joint_torque = state.cmd_joint_torque;
-        cmd_joint_current = state.cmd_joint_current;
+        mf_type = state.state_code.mf_type;
+        ctrl_mode = state.state_code.ctrl_mode;
+        timestamp = state.state_code.timestamp;
+        is_force_stop = state.state_code.is_force_stop;
+        is_connecting_device = state.state_code.is_connecting_device;
+        is_power_on = state.state_code.is_power_on;
+        dummy1 = 0;
+
+        MF1_State* mf1_state = (MF1_State*)state.data;
+        MF2_State* mf2_state = (MF2_State*)state.data;
+
+        switch (mf_type) {
+            case MECHANICAL_FRAME_LIST::ALLJOINT:
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    act_joint_position[i] = mf1_state->act_joint_position[i];
+                    act_joint_velocity[i] = mf1_state->act_joint_velocity[i];
+                    act_joint_torque[i] = mf1_state->act_joint_torque[i];
+                    cmd_joint_position[i] = mf1_state->cmd_joint_value[i];
+                }
+                break;
+            case MECHANICAL_FRAME_LIST::SCARA:
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    act_joint_position[i] = mf2_state->act_joint_position[i];
+                    act_joint_velocity[i] = mf2_state->act_joint_velocity[i];
+                    act_joint_torque[i] = mf2_state->act_joint_torque[i];
+                    cmd_joint_position[i] = mf2_state->cmd_joint_value[i];
+                }
+                break;
+        }
     }
 };

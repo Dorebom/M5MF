@@ -51,6 +51,8 @@ private:
     // >> >> W.R.T Execute Command
     void cmd_executor();
     void transfer_cmd_to_control(st_node_cmd* cmd);
+    // >> ERROR and ALERT
+    void check_error_and_alert();
 
 public:
     SystemManager();
@@ -87,6 +89,22 @@ public:
     }
     void set_control_state_ptr(std::shared_ptr<NodeStateStack> state_stack) {
         control_state_stack_ = state_stack;
+    }
+    void get_control_state() {
+        outer_control_state_ = control_state_stack_->state_stack_.back();
+        inner_control_state_ = (ControlState*)outer_control_state_.data;
+    }
+    void halt_operating_servo() {
+        st_node_cmd cmd;
+        cmd.default_init();
+        cmd.cmd_code.cmd_type = M5MF_CMD_LIST::CS_HALT_OPERATING_SERVO;
+        ctrl_cmd_stack->cmd_stack_.push(cmd);
+    }
+    void raise_operating_servo() {
+        st_node_cmd cmd;
+        cmd.default_init();
+        cmd.cmd_code.cmd_type = M5MF_CMD_LIST::CS_RAISE_OPERATING_SERVO;
+        ctrl_cmd_stack->cmd_stack_.push(cmd);
     }
     // >> w.r.t Manual Force Stop
     void set_manual_force_stop_signal(bool is_force_stop) {

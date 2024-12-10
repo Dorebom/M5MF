@@ -39,6 +39,7 @@ private:
 public:
     circular_stacker<st_node_state> state_stack_;
     NodeStateStack(size_t stack_size) : state_stack_(stack_size) {
+        state_stack_.set_name("NodeStateStack");
     }
     ~NodeStateStack() {
     }

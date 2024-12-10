@@ -22,12 +22,10 @@ int ExtCommModule::generate_send_packet() {
         inner_system_state_->is_requested_state_at_once = false;
     }
 
-    /*
     if (cmd_stack_to_external_system_->cmd_stack_.size() != 0) {
         auto temp_cmd_data = cmd_stack_to_external_system_->cmd_stack_.pop();
-        set_udp_send_cmd((st_node_cmd*)temp_cmd_data.data);
+        set_udp_send_cmd(&temp_cmd_data);
     }
-    */
 
     if (!is_prev_connected_udp && inner_system_state_->is_connected_udp) {
         set_response_cmd_connect();
@@ -57,9 +55,15 @@ void ExtCommModule::set_udp_send_state(st_node_state* state) {
     int stack_marker_size;
     int stack_data_size =
         state->state_code.data_size + sizeof(common_state_code);
+    if (state->state_code.node_id == CONTROL_NODE_ID) {
+        stack_data_size = state->state_code.data_size +
+                          sizeof(ControlStateCode) + sizeof(common_state_code);
+    }
+
     //
     if (stack_data_size > ext_send_packet_.max_stack_size_at_once) {
         M5_LOGE("(STATE)Stack Data Size Over %d", stack_data_size);
+        M5_LOGE("Data Size: %d", state->state_code.data_size);
         return;
     }
     //

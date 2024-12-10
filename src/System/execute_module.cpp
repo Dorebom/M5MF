@@ -6,6 +6,7 @@ void ExecuteModule::execute(M5MF_CMD_LIST cmd_type, st_node_cmd* cmd) {
     if ((int)cmd_type >= 100) {
         return;
     }
+    M5_LOGI("Execute Cmd: %d", (int)cmd_type);
 
     switch (cmd_type) {
         case M5MF_CMD_LIST::CHANGE_SM_FORCE_STOP:
@@ -37,11 +38,11 @@ void ExecuteModule::execute(M5MF_CMD_LIST cmd_type, st_node_cmd* cmd) {
             break;
         case M5MF_CMD_LIST::START_LOGGING:
             start_logging();
-            set_response_cmd_start_logging();
+            // set_response_cmd_start_logging();
             break;
         case M5MF_CMD_LIST::STOP_LOGGING:
             stop_logging();
-            set_response_cmd_stop_logging();
+            // set_response_cmd_stop_logging();
             break;
         case M5MF_CMD_LIST::REQUEST_STATE:
             request_state();
@@ -65,6 +66,7 @@ void ExecuteModule::connect() {
         return;
     }
     inner_system_state_->is_connected_udp = true;
+    inner_system_state_->is_requested_state_at_once = true;
 }
 
 void ExecuteModule::disconnect() {

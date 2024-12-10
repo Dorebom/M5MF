@@ -3,6 +3,7 @@
 SystemManager::SystemManager() {
     // Cmd Stack
     sys_cmd_stack = std::make_shared<NodeCmdStack>(MAX_NODE_CMD_STACK_SIZE);
+    sys_cmd_stack->cmd_stack_.set_name("SystemCmdStack");
 
     // Outer State
     outer_system_state_.state_code.node_id = SYSTEM_NODE_ID;
@@ -51,17 +52,47 @@ void SystemManager::update() {
         change_sm_ready();
     }
 
+    if (outer_system_state_.state_code.state_machine ==
+        node_state_machine::FORCE_STOP) {
+        halt_operating_servo();
+    } else {
+        raise_operating_servo();
+    }
+
+    //
+    get_control_state();
+    //
+    check_error_and_alert();
+
     // 2. Execute Cmd
     cmd_executor();
 
     // 3. Update State
     is_heartbeat_high = heartbeat_.update();
 
+    switch (outer_system_state_.state_code.state_machine) {
+        case node_state_machine::READY:
+            if (!inner_system_state_->is_occured_error_ &&
+                !inner_system_state_->is_occured_warning_ &&
+                !inner_system_state_->is_manual_force_stop) {
+                change_sm_stable();
+            }
+            break;
+        case node_state_machine::REPAIR:
+            if (!inner_system_state_->is_occured_error_ &&
+                !inner_system_state_->is_manual_force_stop) {
+                change_sm_stable();
+            }
+            break;
+        default:
+            break;
+    }
+
     // 4. Display
     // >> >> >> >> NOTE: Display is not implemented yet << << << <<
     // display_.display();
     display_.display(is_heartbeat_high, &outer_system_state_,
-                     inner_system_state_);
+                     inner_system_state_, inner_control_state_);
 
     // 5. Send External System
     ext_comm_.send();
@@ -127,4 +158,35 @@ void SystemManager::transfer_cmd_to_control(st_node_cmd* cmd) {
         return;
     }
     ctrl_cmd_stack->cmd_stack_.push(*cmd);
+}
+
+void SystemManager::check_error_and_alert() {
+    inner_system_state_->is_occured_error_ = false;
+    inner_system_state_->is_occured_warning_ = false;
+
+    if (is_init_ctrl_task) {
+        if (!inner_control_state_->state_code.is_connecting_device) {
+            inner_system_state_->is_occured_error_ = true;
+        }
+        // if (!inner_control_state_->state_code.is_init_joint_pos) {
+        //     inner_system_state_->is_occured_error_ = true;
+        // }
+    }
+
+    // ERROR
+    if (inner_system_state_->is_occured_error_ &&
+        (outer_system_state_.state_code.state_machine ==
+             node_state_machine::STABLE ||
+         outer_system_state_.state_code.state_machine ==
+             node_state_machine::REPAIR)) {
+        outer_system_state_.state_code.state_machine =
+            node_state_machine::FORCE_STOP;
+    }
+    // ALERT
+    if (inner_system_state_->is_occured_warning_ &&
+        outer_system_state_.state_code.state_machine ==
+            node_state_machine::STABLE) {
+        outer_system_state_.state_code.state_machine =
+            node_state_machine::REPAIR;
+    }
 }

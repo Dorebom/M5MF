@@ -22,6 +22,9 @@ private:
     std::shared_ptr<NodeCmdStack> cmd_stack_;
     std::shared_ptr<NodeStateStack> state_stack_;
 
+    // >> Function
+    void get_state();
+
 public:
     ControlManager() {
         // >> Outer State
@@ -40,6 +43,10 @@ public:
         state_stack_->state_stack_.change_overwrite_mode(true);
         // >> Cmd Stack
         cmd_stack_ = std::make_shared<NodeCmdStack>(MAX_NODE_CMD_STACK_SIZE);
+        cmd_stack_->cmd_stack_.set_name("ControlCmdStack");
+        // >> Initialize Data
+        state_->state_code.mf_type = MECHANICAL_FRAME_LIST::ALLJOINT;
+        state_->state_code.ctrl_mode = CTRL_MODE_LIST::STAY;
     };
     ~ControlManager() {};
     bool initialize(CommCan *can_driver);

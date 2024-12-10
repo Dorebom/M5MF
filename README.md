@@ -39,6 +39,12 @@ MF: Mechanical-Frame
 
 # 実装整理
 
+- ISSUE
+  - [ ] Logging機能がしんでる
+    - 症状：Start_Loggingコマンドを受け取ると、M5Stackが再起動する
+  - [ ] 立ち上げ順序が変わると機能しない
+    - 症状：M5Stackを再起動させるとPC側のノードも再起動する必要がある
+
 - ドライバー
   - [x] CANドライバの作成
   - [x] LANドライバの作成
@@ -92,16 +98,17 @@ MF: Mechanical-Frame
   - [ ] GUI設計
     - [ ] UDP通信スキーマ作成
     - [ ] 画面実装
-	‐ [ ] ゲームパッド
-		- [ ] (MF)Control mode 変更
-		- [ ] (非MF)Control Mode 変更
-    - [ ] Mechanical Frame 変更
-		- [ ] Servo ON/OFF
-		- [ ] Force Stop / Release Force Stop
-		- [ ] Speed Up / Down
-		- [ ] 
+  - [ ] ゲームパッド
+    - [x] 1ボタン -> Servo ON/OFF
+    - [x] 2ボタン -> Force Stop / Release Force Stop
+    - [ ] 4ボタン + 上/下 -> Speed Up / Down
+    - [x] 7ボタン -> (MF)Control mode 変更
+    - [x] 8ボタン -> Mechanical Frame 変更
+    - [ ] 5ボタン(左Shift) + 4ボタン + 上/下 -> (非MF)Control Modeの硬さ Up / Down
+    - [ ] 5ボタン(左Shift) + 7ボタン -> (非MF)Control Mode 変更
     - [x] 11ボタン -> StateStream START/STOP
     - [x] 12ボタン -> Logging START/STOP
+    - [ ] Axisボタン -> ロボット移動
 
 # TODO
 - 2024.12.3
@@ -119,3 +126,8 @@ MF: Mechanical-Frame
   - [x] 非常停止外部物理ボタン作成
 - 2024.12.5
   - [x] Windows版ゲームパッドノード(B Node)
+- 2024.12.9
+  - [ ] Mechanical Frame実装
+    - [ ] MF:0 NOBODY
+    - [ ] MF:1 ALLJOINT
+    - [ ] MF:2 SCARA

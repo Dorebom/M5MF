@@ -2,6 +2,7 @@
 
 #include "driver/twai.h"
 
+#define CAN_WAITNG_TIME 10
 class CommCan {
 private:
 public:

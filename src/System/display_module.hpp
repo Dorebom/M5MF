@@ -4,6 +4,9 @@
 #include <M5Unified.h>
 
 #include "Common/node_state.hpp"
+#include "Control/st_control_state.hpp"
+//
+#include "System/st_system_state.hpp"
 
 class DisplayModule {
 private:
@@ -49,7 +52,7 @@ public:
     }
 
     void display(bool is_heartbeat_high, node_state* outer_system_state,
-                 SystemState* inner_system_state) {
+                 SystemState* inner_system_state, ControlState* control_state) {
         // Display
         M5.Display.setTextSize(1);
         // >> Face
@@ -103,6 +106,38 @@ public:
             M5.Display.drawString("M5MF", M5.Display.width() / 2,
                                   M5.Display.height() / 2 - 30);
             M5.Display.setTextColor(GREEN);
+        }
+        // >> Control System State
+        M5.Lcd.fillRect(0, 100, 128, 25, BLACK);
+        if (control_state->state_code.mf_type ==
+            MECHANICAL_FRAME_LIST::ALLJOINT) {
+            M5.Display.drawString("MF-1", M5.Display.width() / 2 - 30,
+                                  M5.Display.height() / 2 + 50);
+        } else if (control_state->state_code.mf_type ==
+                   MECHANICAL_FRAME_LIST::SCARA) {
+            M5.Display.drawString("MF-2", M5.Display.width() / 2 - 30,
+                                  M5.Display.height() / 2 + 50);
+        }
+
+        switch (control_state->state_code.ctrl_mode) {
+            case CTRL_MODE_LIST::STAY:
+                M5.Display.drawString("S", M5.Display.width() / 2 + 40,
+                                      M5.Display.height() / 2 + 50);
+                break;
+            case CTRL_MODE_LIST::POSITION:
+                M5.Display.drawString("P", M5.Display.width() / 2 + 40,
+                                      M5.Display.height() / 2 + 50);
+                break;
+            case CTRL_MODE_LIST::VELOCITY:
+                M5.Display.drawString("V", M5.Display.width() / 2 + 40,
+                                      M5.Display.height() / 2 + 50);
+                break;
+            case CTRL_MODE_LIST::TORQUE:
+                M5.Display.drawString("T", M5.Display.width() / 2 + 40,
+                                      M5.Display.height() / 2 + 50);
+                break;
+            default:
+                break;
         }
 
         is_prev_heartbeat_high = is_heartbeat_high;

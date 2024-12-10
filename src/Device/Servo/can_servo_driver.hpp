@@ -5,7 +5,7 @@
 #include "Device/comm/can_driver.hpp"
 #include "Device/servo/cybergear_driver.hpp"
 #include "Device/servo/m5roller_driver.hpp"
-#include "Device/servo/st_servo.hpp"
+#include "Device/servo/st_servo_state.hpp"
 
 enum class CanServoType
 {
@@ -74,4 +74,5 @@ public:
     bool set_servo_power(uint8_t joint_id, bool is_power_on);
     // bool set_servo_ctrl_mode(uint8_t joint_id, servo_ctrl_mode_list
     // ctrl_mode);
+    void get_joint_state(uint8_t joint_id, ServoState &state);
 };

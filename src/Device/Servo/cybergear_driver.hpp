@@ -571,6 +571,7 @@ public:
                 status.is_connected = false;
             }
         }
+        return false;
     }
 
     void update_status(twai_message_t &rx_msg, XiaomiCyberGearStatus &status) {

@@ -25,7 +25,7 @@ void CommCan::send_can_packet_task(const twai_message_t& packet) {
 }
 
 bool CommCan::recv_can_packet_task(twai_message_t& packet) {
-    auto ret = twai_receive(&packet, pdMS_TO_TICKS(10));
+    auto ret = twai_receive(&packet, pdMS_TO_TICKS(CAN_WAITNG_TIME));
     if (ret != ESP_OK) {
         M5_LOGE(
             "ControlManager::recv_can_packet_task: Failed to receive CAN "
