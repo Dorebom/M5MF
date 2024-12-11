@@ -96,7 +96,6 @@ void SystemManager::update() {
 
     // 5. Send External System
     ext_comm_.send();
-
     return;
 }
 

@@ -23,9 +23,9 @@
 #define COMM_RECV_TASK_PRIORITY   10  // 1
 #define CTRL_TASK_PRIORITY        20  // 2
 // thread time interval
-#define CTRL_TASK_TIME_INTERVAL      5   // 1
-#define MAIN_TASK_TIME_INTERVAL      50  // 20
-#define COMM_RECV_TASK_TIME_INTERVAL 50
+#define CTRL_TASK_TIME_INTERVAL      2   // 1
+#define MAIN_TASK_TIME_INTERVAL      10  // 20
+#define COMM_RECV_TASK_TIME_INTERVAL 10
 // thread stack size
 #define MAIN_STACK_DEPTH      8192
 #define CTRL_STACK_DEPTH      8192
@@ -112,13 +112,13 @@ static void main_task(void *arg) {
      */
     sys_manager.change_sm_initilizing();
     //
-    sys_manager.initialize(MAIN_TASK_TIME_INTERVAL, &udp_);
     // sys_manager.set_display_lcd(lcd_);
     //
     while (!sys_manager.check_initilized_ctrl_task()) {
         M5_LOGW("Waiting for Control Task Initialization");
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
     }
+    sys_manager.initialize(MAIN_TASK_TIME_INTERVAL, &udp_);
     //
     sys_manager.change_sm_ready();
     //

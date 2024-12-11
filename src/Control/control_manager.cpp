@@ -1,75 +1,109 @@
 #include "control_manager.hpp"
 
 void ControlManager::get_state() {
-    MF1_State* mf1_state = (MF1_State*)state_->data;
-    MF2_State* mf2_state = (MF2_State*)state_->data;
-
-    switch (state_->state_code.mf_type) {
-        case MECHANICAL_FRAME_LIST::ALLJOINT:
-            outer_state_.state_code.data_size =
-                sizeof(ControlStateCode) + sizeof(MF1_State);
-            break;
-        case MECHANICAL_FRAME_LIST::SCARA:
-            outer_state_.state_code.data_size =
-                sizeof(ControlStateCode) + sizeof(MF2_State);
-            break;
-        default:
-            break;
-    }
-
     ServoState servo_state[SERVO_NUM];
     for (int i = 0; i < SERVO_NUM; i++) {
         servo_.get_joint_state(i, servo_state[i]);
+        local_state.act_joint_position[i] = servo_state[i].act_joint_position;
+        local_state.act_joint_velocity[i] = servo_state[i].act_joint_velocity;
+        local_state.act_joint_torque[i] = servo_state[i].act_joint_torque;
     }
-    switch (state_->state_code.mf_type) {
+}
+
+void ControlManager::change_data_size() {
+    uint8_t data_size = 0;
+    switch (local_state.state_code.mf_type) {
         case MECHANICAL_FRAME_LIST::ALLJOINT:
-            for (int i = 0; i < SERVO_NUM; i++) {
-                mf1_state->act_joint_position[i] =
-                    servo_state[i].act_joint_position;
-                mf1_state->act_joint_velocity[i] =
-                    servo_state[i].act_joint_velocity;
-                mf1_state->act_joint_torque[i] =
-                    servo_state[i].act_joint_torque;
+            switch (local_state.state_code.ctrl_mode) {
+                case CTRL_MODE_LIST::POSITION:
+                    data_size = sizeof(MFAllJointPosState);
+                    break;
+                case CTRL_MODE_LIST::VELOCITY:
+                    data_size = sizeof(MFAllJointVelState);
+                    break;
+                case CTRL_MODE_LIST::TORQUE:
+                    data_size = sizeof(MFAllJointTrqState);
+                    break;
+                default:
+                    break;
             }
             break;
         case MECHANICAL_FRAME_LIST::SCARA:
-            for (int i = 0; i < SERVO_NUM; i++) {
-                mf2_state->act_joint_position[i] =
-                    servo_state[i].act_joint_position;
-                mf2_state->act_joint_velocity[i] =
-                    servo_state[i].act_joint_velocity;
-                mf2_state->act_joint_torque[i] =
-                    servo_state[i].act_joint_torque;
+            switch (local_state.state_code.ctrl_mode) {
+                case CTRL_MODE_LIST::POSITION:
+                    // TO DO : Implement
+                    // data_size = sizeof(MFScaraPosState);
+                    break;
+                case CTRL_MODE_LIST::VELOCITY:
+                    // TO DO : Implement
+                    // data_size = sizeof(MFScaraVelState);
+                    break;
+                case CTRL_MODE_LIST::TORQUE:
+                    // TO DO : Implement
+                    // data_size = sizeof(MFScaraTrqState);
+                    break;
+                default:
+                    break;
             }
-            // TODO : Add SCARA State
             break;
         default:
             break;
     }
-
-    // print
-    // M5_LOGD("act_joint_position: %f, %f, %f",
-    // mf1_state->act_joint_position[0],
-    //        mf1_state->act_joint_position[1],
-    //        mf1_state->act_joint_position[2]);
+    local_state.state_code.data_size = data_size;
 }
 
 bool ControlManager::initialize(CommCan* can_driver) {
     // Initialize Servo Module
-    // >> Set CAN Driver
+    // >> 1. Set CAN Driver
     servo_.init(can_driver);
-
-    state_->state_code.is_connecting_device = servo_.connect_servo();
-    if (!state_->state_code.is_connecting_device) {
+    // >> 2. Connect Servo
+    local_state.state_code.is_connecting_device = servo_.connect_servo();
+    if (!local_state.state_code.is_connecting_device) {
         M5_LOGE("ControlManager::initialize: Failed to connect servo");
+        return false;
+    }
+
+    // Check Data Size
+    node_state _state;
+    if (_state.check_data_size_over(sizeof(ControlStateCode) +
+                                    sizeof(MFAllJointPosState))) {
+        M5_LOGE("Data Size Over: ControlState > MAX_NODE_STATE_DATA_SIZE");
+        return false;
+    }
+    if (_state.check_data_size_over(sizeof(ControlStateCode) +
+                                    sizeof(MFAllJointVelState))) {
+        M5_LOGE("Data Size Over: ControlState > MAX_NODE_STATE_DATA_SIZE");
+        return false;
+    }
+    if (_state.check_data_size_over(sizeof(ControlStateCode) +
+                                    sizeof(MFAllJointTrqState))) {
+        M5_LOGE("Data Size Over: ControlState > MAX_NODE_STATE_DATA_SIZE");
+        return false;
+    }
+    // Check Control State Data Size
+    ControlState _c_state;
+    if (_c_state.check_data_size_over(sizeof(MFAllJointPosState))) {
+        M5_LOGE(
+            "Data Size Over: MFAllJointPosState > MAX_CONTROL_STATE_DATA_SIZE");
+        return false;
+    }
+    if (_c_state.check_data_size_over(sizeof(MFAllJointVelState))) {
+        M5_LOGE(
+            "Data Size Over: MFAllJointVelState > MAX_CONTROL_STATE_DATA_SIZE");
+        return false;
+    }
+    if (_c_state.check_data_size_over(sizeof(MFAllJointTrqState))) {
+        M5_LOGE(
+            "Data Size Over: MFAllJointTrqState > MAX_CONTROL_STATE_DATA_SIZE");
         return false;
     }
 
     return true;
 }
+
 void ControlManager::update() {
     //
-    if (state_->state_code.is_connecting_device) {
+    if (local_state.state_code.is_connecting_device) {
         // 1. Execute Cmd
         cmd_executor();
         // 2. Get State
@@ -78,10 +112,10 @@ void ControlManager::update() {
         // 3. Update State and Control Input
 
         // >> >> operate servo area
-        if (state_->state_code.is_force_stop ||
-            !state_->state_code.is_power_on) {
+        if (local_state.state_code.is_force_stop ||
+            !local_state.state_code.is_power_on) {
             servo_.stop_motor();
-            state_->state_code.is_power_on = false;
+            local_state.state_code.is_power_on = false;
         } else {
             // servo_.enable_motor();
         }
@@ -91,8 +125,8 @@ void ControlManager::update() {
         set_control_state2stack();
         //
     } else {
-        state_->state_code.is_connecting_device = servo_.connect_servo();
-        if (!state_->state_code.is_connecting_device) {
+        local_state.state_code.is_connecting_device = servo_.connect_servo();
+        if (!local_state.state_code.is_connecting_device) {
             M5_LOGE("ControlManager::update: Failed to connect servo");
         }
     }
@@ -105,46 +139,43 @@ void ControlManager::cmd_executor() {
 
         switch (cmd.cmd_code.cmd_type) {
             case M5MF_CMD_LIST::CS_HALT_OPERATING_SERVO:
-                state_->state_code.is_force_stop = true;
-                state_->state_code.is_power_on = false;
+                local_state.state_code.is_force_stop = true;
+                local_state.state_code.is_power_on = false;
                 break;
             case M5MF_CMD_LIST::CS_RAISE_OPERATING_SERVO:
-                state_->state_code.is_force_stop = false;
+                local_state.state_code.is_force_stop = false;
                 break;
             case M5MF_CMD_LIST::CS_POWER_ON:
-                if (state_->state_code.is_force_stop) {
+                if (local_state.state_code.is_force_stop) {
                     M5_LOGE("ControlManager::cmd_executor: Force Stop");
                     break;
                 }
                 servo_.enable_motor();
-                state_->state_code.is_power_on = true;
+                local_state.state_code.is_power_on = true;
                 break;
             case M5MF_CMD_LIST::CS_POWER_OFF:
-                if (state_->state_code.is_force_stop) {
+                if (local_state.state_code.is_force_stop) {
                     M5_LOGE("ControlManager::cmd_executor: Force Stop");
                     break;
                 }
                 servo_.stop_motor();
-                state_->state_code.is_power_on = false;
+                local_state.state_code.is_power_on = false;
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_MF1:
-                state_->state_code.mf_type = MECHANICAL_FRAME_LIST::ALLJOINT;
-                outer_state_.state_code.data_size =
-                    sizeof(ControlStateCode) + sizeof(MF1_State);
+                local_state.state_code.mf_type =
+                    MECHANICAL_FRAME_LIST::ALLJOINT;
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_MF2:
-                state_->state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
-                outer_state_.state_code.data_size =
-                    sizeof(ControlStateCode) + sizeof(MF2_State);
+                local_state.state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_POSITION_CONTROL:
-                state_->state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_VELOCITY_CONTROL:
-                state_->state_code.ctrl_mode = CTRL_MODE_LIST::VELOCITY;
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::VELOCITY;
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_TORQUE_CONTROL:
-                state_->state_code.ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::TORQUE;
                 break;
             default:
                 break;
@@ -162,5 +193,64 @@ std::shared_ptr<NodeCmdStack> ControlManager::get_control_cmd_ptr() {
 }
 
 void ControlManager::set_control_state2stack() {
-    state_stack_->state_stack_.push(outer_state_);
+    /*
+     * *** CAUTION ***
+     * ここで外部システムに送信するデータを設定している
+     * したがって、SystemManagerで再度データを圧縮設定する必要はない
+     */
+    //
+    change_data_size();
+    //
+    st_node_state state;
+    ControlState* cs_data = (ControlState*)state.data;
+    // Node共通の情報を設定
+    state.state_code.node_id = CONTROL_NODE_ID;
+    state.state_code.state_machine = node_state_machine::UNCONFIGURED;
+    state.state_code.transit_destination_node_state_machine =
+        (node_state_machine)CONTROL_NODE_SIGNATURE;
+    state.state_code.data_size =
+        sizeof(ControlStateCode) + local_state.state_code.data_size;
+    // ControlStateの情報を設定
+    // >> 1. ControlStateCode
+    cs_data->state_code.deepcopy(local_state.state_code);
+    // >> 2. ControlStateData
+    MFAllJointPosState* mf_aj_cm_p_state = (MFAllJointPosState*)cs_data->data;
+    MFAllJointVelState* mf_aj_cm_v_state = (MFAllJointVelState*)cs_data->data;
+    MFAllJointTrqState* mf_aj_cm_t_state = (MFAllJointTrqState*)cs_data->data;
+    switch (local_state.state_code.mf_type) {
+        case MECHANICAL_FRAME_LIST::ALLJOINT:
+            switch (local_state.state_code.ctrl_mode) {
+                case CTRL_MODE_LIST::POSITION:
+                    mf_aj_cm_p_state->deepcopy(local_state);
+                    break;
+                case CTRL_MODE_LIST::VELOCITY:
+                    // TODO Deepcopy
+                    break;
+                case CTRL_MODE_LIST::TORQUE:
+                    // TODO Deepcopy
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case MECHANICAL_FRAME_LIST::SCARA:
+            switch (local_state.state_code.ctrl_mode) {
+                case CTRL_MODE_LIST::POSITION:
+                    /* code */
+                    break;
+                case CTRL_MODE_LIST::VELOCITY:
+                    /* code */
+                    break;
+                case CTRL_MODE_LIST::TORQUE:
+                    /* code */
+                    break;
+                default:
+                    break;
+            }
+            break;
+        default:
+            break;
+    }
+    // StateStackにPush
+    state_stack_->state_stack_.push(state);
 }

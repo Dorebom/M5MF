@@ -3,6 +3,7 @@
 #include "Device/Servo/can_servo_driver.hpp"
 
 #define SERVO_NUM 3
+#define POSE_DIM  3
 
 struct ServoInfo
 {

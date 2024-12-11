@@ -29,6 +29,9 @@ struct st_node_state
 {
     common_state_code state_code;
     std::uint8_t data[MAX_NODE_STATE_DATA_SIZE];
+    bool check_data_size_over(std::uint8_t size) {
+        return size > MAX_NODE_STATE_DATA_SIZE;
+    }
 };
 
 typedef st_node_state node_state;

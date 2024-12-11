@@ -4,15 +4,13 @@
 
 int ExtCommModule::generate_send_packet() {
     // (機能)ext_send_packet_を生成する
-
+    // State
     if (inner_system_state_->is_logging) {
-        auto state_stack_size = control_state_stack_->state_stack_.size();
-
+        size_t state_stack_size = control_state_stack_->state_stack_.size();
         for (int i = 0; i < state_stack_size; i++) {
-            auto temp_state_data = control_state_stack_->state_stack_.pop();
-            control_state_limited_->compressed_copy(
-                *(ControlState*)temp_state_data.data);
-            set_udp_send_state(&outer_control_state_limited_);
+            st_node_state temp_state_data =
+                control_state_stack_->state_stack_.pop();
+            set_udp_send_state(&temp_state_data);
         }
     }
     if (inner_system_state_->is_streaming_state) {
@@ -21,26 +19,18 @@ int ExtCommModule::generate_send_packet() {
         set_udp_send_state(outer_control_state_);
         inner_system_state_->is_requested_state_at_once = false;
     }
-
+    // Cmd
     if (cmd_stack_to_external_system_->cmd_stack_.size() != 0) {
         auto temp_cmd_data = cmd_stack_to_external_system_->cmd_stack_.pop();
         set_udp_send_cmd(&temp_cmd_data);
     }
-
+    //
     if (!is_prev_connected_udp && inner_system_state_->is_connected_udp) {
         set_response_cmd_connect();
     } else if (is_prev_connected_udp &&
                !inner_system_state_->is_connected_udp) {
         set_response_cmd_disconnect();
     }
-    /*
-    if (!is_prev_logging && inner_system_state_->is_logging) {
-        set_response_cmd_start_logging();
-    } else if (is_prev_logging && !inner_system_state_->is_logging) {
-        set_response_cmd_stop_logging();
-    }
-    */
-
     // パケットサイズを計算
     if (ext_send_packet_.stack_marker_num > 0) {
         int packet_size =
