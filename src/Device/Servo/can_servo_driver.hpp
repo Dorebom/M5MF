@@ -2,6 +2,7 @@
 
 #include <map>
 
+#include "Control/li_ctrl_mode.hpp"
 #include "Device/comm/can_driver.hpp"
 #include "Device/servo/cybergear_driver.hpp"
 #include "Device/servo/m5roller_driver.hpp"
@@ -70,9 +71,6 @@ public:
     bool velocity_control(uint8_t joint_id, double target_velocity);
     bool current_control(uint8_t joint_id, double target_current);
     bool torque_control(uint8_t joint_id, double target_torque);
-    bool stay_position(uint8_t joint_id);
-    bool set_servo_power(uint8_t joint_id, bool is_power_on);
-    // bool set_servo_ctrl_mode(uint8_t joint_id, servo_ctrl_mode_list
-    // ctrl_mode);
     void get_joint_state(uint8_t joint_id, ServoState &state);
+    void change_ctrl_mode(uint8_t joint_id, CTRL_MODE_LIST ctrl_mode);
 };

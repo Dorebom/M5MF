@@ -7,6 +7,7 @@
 #include "Common/node_cmd.hpp"
 #include "Common/node_state.hpp"
 //
+#include "Control/st_control_cmd.hpp"
 #include "Control/st_control_state.hpp"
 // >> module
 #include "Control/servo_module.hpp"
@@ -21,6 +22,9 @@ private:
     ControlState *state_;
     std::shared_ptr<NodeCmdStack> cmd_stack_;
     std::shared_ptr<NodeStateStack> state_stack_;
+
+    // >> Data
+    uint8_t cmd_watchdog_counter = 0;
 
     // >> Function
     void get_state();

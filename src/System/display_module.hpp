@@ -17,6 +17,8 @@ private:
     // Flag
     bool is_prev_heartbeat_high = false;
     bool is_prev_connected_udp = false;
+    bool is_prev_logging = false;
+    bool is_prev_streaming_state = false;
     node_state_machine prev_state_machine;
     CTRL_MODE_LIST prev_ctrl_mode;
     MECHANICAL_FRAME_LIST prev_mf_type;
@@ -114,13 +116,14 @@ public:
             prev_ctrl_mode != control_state->state_code.ctrl_mode) {
             M5.Lcd.fillRect(0, 100, 128, 25, BLACK);
 
+            M5.Display.setTextColor(GREEN);
             if (control_state->state_code.mf_type ==
                 MECHANICAL_FRAME_LIST::ALLJOINT) {
-                M5.Display.drawString("MF-1", M5.Display.width() / 2 - 30,
+                M5.Display.drawString("MF-1", M5.Display.width() / 2 - 25,
                                       M5.Display.height() / 2 + 50);
             } else if (control_state->state_code.mf_type ==
                        MECHANICAL_FRAME_LIST::SCARA) {
-                M5.Display.drawString("MF-2", M5.Display.width() / 2 - 30,
+                M5.Display.drawString("MF-2", M5.Display.width() / 2 - 25,
                                       M5.Display.height() / 2 + 50);
             }
 
@@ -145,9 +148,25 @@ public:
                     break;
             }
         }
+        // >> Logging State
+        if (inner_system_state->is_logging && !is_prev_logging) {
+            M5.Lcd.fillCircle(30, 10, 8, RED);
+        } else if (!inner_system_state->is_logging && is_prev_logging) {
+            M5.Lcd.fillCircle(30, 10, 8, BLACK);
+        }
+        // >> Streaming State
+        if (inner_system_state->is_streaming_state &&
+            !is_prev_streaming_state) {
+            M5.Lcd.fillTriangle(3, 3, 3, 17, 13, 10, GREEN);
+        } else if (!inner_system_state->is_streaming_state &&
+                   is_prev_streaming_state) {
+            M5.Lcd.fillTriangle(3, 3, 3, 17, 13, 10, BLACK);
+        }
 
         is_prev_heartbeat_high = is_heartbeat_high;
         is_prev_connected_udp = inner_system_state->is_connected_udp;
+        is_prev_logging = inner_system_state->is_logging;
+        is_prev_streaming_state = inner_system_state->is_streaming_state;
         prev_state_machine = outer_system_state->state_code.state_machine;
         prev_ctrl_mode = control_state->state_code.ctrl_mode;
         prev_mf_type = control_state->state_code.mf_type;

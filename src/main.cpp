@@ -23,8 +23,8 @@
 #define COMM_RECV_TASK_PRIORITY   10  // 1
 #define CTRL_TASK_PRIORITY        20  // 2
 // thread time interval
-#define CTRL_TASK_TIME_INTERVAL      2   // 1
-#define MAIN_TASK_TIME_INTERVAL      10  // 20
+#define CTRL_TASK_TIME_INTERVAL      5   // 1
+#define MAIN_TASK_TIME_INTERVAL      25  // 20
 #define COMM_RECV_TASK_TIME_INTERVAL 10
 // thread stack size
 #define MAIN_STACK_DEPTH      8192

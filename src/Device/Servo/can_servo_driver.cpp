@@ -99,8 +99,8 @@ bool CanServoDriver::position_control(uint8_t joint_id,
                 //                                  send_msg);
                 break;
             case CanServoType::CYBERGEAR:
-                cybergear_driver.set_position_ref(info.can_id, target_position,
-                                                  send_msg);
+                cybergear_driver.set_position_ref(
+                    info.can_id, (float)target_position, send_msg);
                 break;
             default:
                 break;
@@ -123,8 +123,8 @@ bool CanServoDriver::velocity_control(uint8_t joint_id,
                 //                                  send_msg);
                 break;
             case CanServoType::CYBERGEAR:
-                cybergear_driver.set_spd_ref(info.can_id, target_velocity,
-                                             send_msg);
+                cybergear_driver.set_spd_ref(info.can_id,
+                                             (float)target_velocity, send_msg);
                 break;
             default:
                 break;
@@ -145,7 +145,7 @@ bool CanServoDriver::current_control(uint8_t joint_id, double target_current) {
                 //                                 send_msg);
                 break;
             case CanServoType::CYBERGEAR:
-                cybergear_driver.set_iq_ref(info.can_id, target_current,
+                cybergear_driver.set_iq_ref(info.can_id, (float)target_current,
                                             send_msg);
                 break;
             default:
@@ -201,5 +201,45 @@ void CanServoDriver::get_joint_state(uint8_t joint_id, ServoState& state) {
             default:
                 break;
         }
+    }
+}
+
+void CanServoDriver::change_ctrl_mode(uint8_t joint_id,
+                                      CTRL_MODE_LIST ctrl_mode) {
+    if (servo_map_.find(joint_id) == servo_map_.end()) {
+        return;
+    } else {
+        ServoTypeInfo info = servo_map_[joint_id];
+        switch (info.type) {
+            case CanServoType::M5ROLLER:
+                break;
+            case CanServoType::CYBERGEAR:
+                switch (ctrl_mode) {
+                    case CTRL_MODE_LIST::POSITION:
+                        cybergear_driver.set_limit_spd(info.can_id, 10.0,
+                                                       send_msg);
+                        callback(info, send_msg);
+                        cybergear_driver.set_position_mode(info.can_id,
+                                                           send_msg);
+                        break;
+                    case CTRL_MODE_LIST::VELOCITY:
+                        cybergear_driver.set_limit_cur(info.can_id, 6.0,
+                                                       send_msg);
+                        callback(info, send_msg);
+                        cybergear_driver.set_velocity_mode(info.can_id,
+                                                           send_msg);
+                        break;
+                    case CTRL_MODE_LIST::TORQUE:
+                        cybergear_driver.set_current_mode(info.can_id,
+                                                          send_msg);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+        callback(info, send_msg);
     }
 }

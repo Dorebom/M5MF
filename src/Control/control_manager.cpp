@@ -1,6 +1,9 @@
 #include "control_manager.hpp"
 
 void ControlManager::get_state() {
+    // Timestamp
+    local_state.state_code.timestamp = micros();
+
     ServoState servo_state[SERVO_NUM];
     for (int i = 0; i < SERVO_NUM; i++) {
         servo_.get_joint_state(i, servo_state[i]);
@@ -117,12 +120,66 @@ void ControlManager::update() {
             servo_.stop_motor();
             local_state.state_code.is_power_on = false;
         } else {
-            // servo_.enable_motor();
+            switch (local_state.state_code.ctrl_mode) {
+                case CTRL_MODE_LIST::POSITION:
+                    //
+                    for (int i = 0; i < SERVO_NUM; i++) {
+                        local_state.cmd_joint_position[i] =
+                            local_state.ref_joint_position[i];
+                    }
+                    //
+                    if (cmd_watchdog_counter > 10) {
+                        for (int i = 0; i < SERVO_NUM; i++) {
+                            local_state.cmd_joint_position[i] =
+                                local_state.act_joint_position[i];
+                        }
+                    }
+                    //
+                    servo_.position_control(local_state);
+                    break;
+                case CTRL_MODE_LIST::VELOCITY:
+                    //
+                    for (int i = 0; i < SERVO_NUM; i++) {
+                        local_state.cmd_joint_velocity[i] =
+                            local_state.ref_joint_velocity[i];
+                    }
+                    //
+                    if (cmd_watchdog_counter > 10) {
+                        for (int i = 0; i < SERVO_NUM; i++) {
+                            local_state.cmd_joint_velocity[i] = 0.0;
+                        }
+                    }
+                    //
+                    servo_.velocity_control(local_state);
+                    break;
+                case CTRL_MODE_LIST::TORQUE:
+                    //
+                    for (int i = 0; i < SERVO_NUM; i++) {
+                        local_state.cmd_joint_torque[i] =
+                            local_state.ref_joint_torque[i];
+                    }
+                    //
+                    if (cmd_watchdog_counter > 10) {
+                        for (int i = 0; i < SERVO_NUM; i++) {
+                            local_state.cmd_joint_torque[i] = 0.0;
+                        }
+                    }
+                    //
+                    servo_.torque_control(local_state);
+                    break;
+                default:
+                    break;
+            }
         }
         // << << end of operate servo area
 
         // 4. Send System
         set_control_state2stack();
+
+        // 5. Display
+        // M5_LOGD("pos: %f, %f, %f", local_state.act_joint_position[0],
+        //        local_state.act_joint_position[1],
+        //        local_state.act_joint_position[2]);
         //
     } else {
         local_state.state_code.is_connecting_device = servo_.connect_servo();
@@ -137,6 +194,10 @@ void ControlManager::cmd_executor() {
     if (cmd_stack_->cmd_stack_.size() != 0) {
         st_node_cmd cmd = cmd_stack_->cmd_stack_.pop();
 
+        MFAllJointPosCmd* mf_aj_cm_p_cmd = (MFAllJointPosCmd*)cmd.data;
+        MFAllJointVelCmd* mf_aj_cm_v_cmd = (MFAllJointVelCmd*)cmd.data;
+        MFAllJointTrqCmd* mf_aj_cm_t_cmd = (MFAllJointTrqCmd*)cmd.data;
+
         switch (cmd.cmd_code.cmd_type) {
             case M5MF_CMD_LIST::CS_HALT_OPERATING_SERVO:
                 local_state.state_code.is_force_stop = true;
@@ -150,7 +211,16 @@ void ControlManager::cmd_executor() {
                     M5_LOGE("ControlManager::cmd_executor: Force Stop");
                     break;
                 }
-                servo_.enable_motor();
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    local_state.ref_joint_position[i] =
+                        local_state.act_joint_position[i];
+                    local_state.cmd_joint_position[i] =
+                        local_state.act_joint_position[i];
+                    local_state.cmd_joint_velocity[i] = 0.0;
+                    local_state.cmd_joint_aceleration[i] = 0.0;
+                    local_state.cmd_joint_torque[i] = 0.0;
+                }
+                servo_.enable_motor(local_state);
                 local_state.state_code.is_power_on = true;
                 break;
             case M5MF_CMD_LIST::CS_POWER_OFF:
@@ -170,16 +240,79 @@ void ControlManager::cmd_executor() {
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_POSITION_CONTROL:
                 local_state.state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
+                if (local_state.state_code.mf_type ==
+                    MECHANICAL_FRAME_LIST::ALLJOINT) {
+                    local_state.state_code.servo_ctrl_mode =
+                        CTRL_MODE_LIST::POSITION;
+                }
+                servo_.change_ctrl_mode(local_state);
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_VELOCITY_CONTROL:
                 local_state.state_code.ctrl_mode = CTRL_MODE_LIST::VELOCITY;
+                if (local_state.state_code.mf_type ==
+                    MECHANICAL_FRAME_LIST::ALLJOINT) {
+                    local_state.state_code.servo_ctrl_mode =
+                        CTRL_MODE_LIST::VELOCITY;
+                }
+                servo_.change_ctrl_mode(local_state);
                 break;
             case M5MF_CMD_LIST::CS_CHANGE_TORQUE_CONTROL:
                 local_state.state_code.ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                if (local_state.state_code.mf_type ==
+                    MECHANICAL_FRAME_LIST::ALLJOINT) {
+                    local_state.state_code.servo_ctrl_mode =
+                        CTRL_MODE_LIST::TORQUE;
+                }
+                servo_.change_ctrl_mode(local_state);
+                break;
+            case M5MF_CMD_LIST::CS_ALLJOINT_POSITION_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
+                local_state.state_code.servo_ctrl_mode =
+                    CTRL_MODE_LIST::POSITION;
+                local_state.state_code.mf_type =
+                    MECHANICAL_FRAME_LIST::ALLJOINT;
+                if (!local_state.state_code.is_power_on) {
+                    break;
+                }
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    local_state.ref_joint_position[i] =
+                        mf_aj_cm_p_cmd->ref_joint_position[i];
+                }
+                cmd_watchdog_counter = 0;
+                break;
+            case M5MF_CMD_LIST::CS_ALLJOINT_VELOCITY_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::VELOCITY;
+                local_state.state_code.servo_ctrl_mode =
+                    CTRL_MODE_LIST::VELOCITY;
+                local_state.state_code.mf_type =
+                    MECHANICAL_FRAME_LIST::ALLJOINT;
+                if (!local_state.state_code.is_power_on) {
+                    break;
+                }
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    local_state.ref_joint_velocity[i] =
+                        mf_aj_cm_v_cmd->ref_joint_velocity[i];
+                }
+                cmd_watchdog_counter = 0;
+                break;
+            case M5MF_CMD_LIST::CS_ALLJOINT_TORQUE_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.servo_ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.mf_type =
+                    MECHANICAL_FRAME_LIST::ALLJOINT;
+                if (!local_state.state_code.is_power_on) {
+                    break;
+                }
+                for (int i = 0; i < SERVO_NUM; i++) {
+                    local_state.ref_joint_torque[i] =
+                        mf_aj_cm_t_cmd->ref_joint_torque[i];
+                }
+                cmd_watchdog_counter = 0;
                 break;
             default:
                 break;
         }
+        cmd_watchdog_counter++;
     }
     return;
 }
@@ -224,10 +357,10 @@ void ControlManager::set_control_state2stack() {
                     mf_aj_cm_p_state->deepcopy(local_state);
                     break;
                 case CTRL_MODE_LIST::VELOCITY:
-                    // TODO Deepcopy
+                    mf_aj_cm_v_state->deepcopy(local_state);
                     break;
                 case CTRL_MODE_LIST::TORQUE:
-                    // TODO Deepcopy
+                    mf_aj_cm_t_state->deepcopy(local_state);
                     break;
                 default:
                     break;

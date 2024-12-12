@@ -142,7 +142,7 @@ void SystemManager::cmd_executor() {
         cmd = sys_cmd_stack->cmd_stack_.pop();
 
         inner_system_state_->act_cmd_type = cmd.cmd_code.cmd_type;
-        M5_LOGI("Act Cmd Type: %d", (int)inner_system_state_->act_cmd_type);
+        // M5_LOGI("Act Cmd Type: %d", (int)inner_system_state_->act_cmd_type);
         if ((int)cmd.cmd_code.cmd_type < 100) {
             execute_module_.execute(inner_system_state_->act_cmd_type, &cmd);
         } else {

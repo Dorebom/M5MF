@@ -2,13 +2,13 @@
 
 #include <memory>
 
+#include "Common/m5mf_def.hpp"
 #include "Common/node_cmd.hpp"
 #include "Common/node_state.hpp"
 #include "Common/st_udp_data_frame.hpp"
 #include "System/st_system_state.hpp"
 //
 #include "Control/st_control_state.hpp"
-#include "Control/st_control_state_limited.hpp"
 //
 #include "Device/Comm/udp_driver.hpp"
 
@@ -27,8 +27,6 @@ private:
     node_state* outer_control_state_;
     SystemState* inner_system_state_;
     //
-    node_state outer_control_state_limited_;
-    ControlStateLimited* control_state_limited_;
 
     // >> UDP Packet
     uint8_t send_packet_buffer[UDP_SEND_PACKET_MAX_SIZE];
@@ -55,12 +53,6 @@ private:
 
 public:
     ExtCommModule() {
-        outer_control_state_limited_.state_code.node_id = 3;
-        outer_control_state_limited_.state_code.data_size =
-            sizeof(ControlStateLimited);
-        control_state_limited_ =
-            (ControlStateLimited*)outer_control_state_limited_.data;
-
         cmd_stack_to_external_system_ =
             std::make_shared<NodeCmdStack>(MAX_NODE_CMD_STACK_SIZE);
         cmd_stack_to_external_system_->cmd_stack_.set_name(
