@@ -309,6 +309,28 @@ void ControlManager::cmd_executor() {
                 }
                 cmd_watchdog_counter = 0;
                 break;
+            case M5MF_CMD_LIST::CS_SCARA_POSITION_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
+                local_state.state_code.servo_ctrl_mode =
+                    CTRL_MODE_LIST::POSITION;
+                local_state.state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
+                break;
+            case M5MF_CMD_LIST::CS_SCARA_VELOCITY_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::VELOCITY;
+                local_state.state_code.servo_ctrl_mode =
+                    CTRL_MODE_LIST::VELOCITY;
+                local_state.state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
+                break;
+            case M5MF_CMD_LIST::CS_SCARA_TORQUE_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.servo_ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
+                break;
+            case M5MF_CMD_LIST::CS_SCARA_POSITRQ_CONTROL:
+                local_state.state_code.ctrl_mode = CTRL_MODE_LIST::POSITION;
+                local_state.state_code.servo_ctrl_mode = CTRL_MODE_LIST::TORQUE;
+                local_state.state_code.mf_type = MECHANICAL_FRAME_LIST::SCARA;
+                break;
             default:
                 break;
         }
