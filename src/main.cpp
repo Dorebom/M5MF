@@ -15,6 +15,8 @@
 #include "Device/comm/can_driver.hpp"
 #include "Device/comm/udp_driver.hpp"
 //
+#include "Control/Dynamics/pose_transform.hpp"
+#include "Control/Dynamics/rigid_transform.hpp"
 #include "Control/control_manager.hpp"
 #include "System/system_manager.hpp"
 
@@ -234,6 +236,60 @@ void setup(void) {
 
     M5DEV_LOGI("Thread initialized");
     // <--END 7. Initialize THREAD
+
+    PoseTransform pose_transform;
+
+    Eigen::Matrix4d htmat = Eigen::Matrix4d::Identity();
+    Eigen::Vector3d p;
+    Eigen::Vector3d q;
+
+    pose_transform.transform_htmat2pose(htmat, p, q);
+
+    M5_LOGI("p: %f, %f, %f", p[0], p[1], p[2]);
+    M5_LOGI("q: %f, %f, %f", q[0], q[1], q[2]);
+
+    Eigen::VectorXd pose(6);
+    for (int i = 0; i < 6; i++) {
+        pose[i] = (i + 1) * 0.1;
+    }
+    pose_transform.transform_pose2htmat(pose, htmat);
+
+    M5_LOGI("htmat: %f, %f, %f, %f", htmat(0, 0), htmat(0, 1), htmat(0, 2),
+            htmat(0, 3));
+    M5_LOGI("htmat: %f, %f, %f, %f", htmat(1, 0), htmat(1, 1), htmat(1, 2),
+            htmat(1, 3));
+    M5_LOGI("htmat: %f, %f, %f, %f", htmat(2, 0), htmat(2, 1), htmat(2, 2),
+            htmat(2, 3));
+    M5_LOGI("htmat: %f, %f, %f, %f", htmat(3, 0), htmat(3, 1), htmat(3, 2),
+            htmat(3, 3));
+
+    Eigen::VectorXd pose2(6);
+    pose_transform.transform_htmat2pose(htmat, pose2);
+
+    M5_LOGI("pose2: %f, %f, %f, %f, %f, %f", pose2[0], pose2[1], pose2[2],
+            pose2[3], pose2[4], pose2[5]);
+
+    Eigen::Vector3d p2;
+    Eigen::Vector4d q2;
+    pose_transform.transform_htmat2pq(htmat, p2, q2);
+
+    M5_LOGI("p2: %f, %f, %f", p2[0], p2[1], p2[2]);
+    M5_LOGI("q2: %f, %f, %f, %f", q2[0], q2[1], q2[2], q2[3]);
+
+    Eigen::Matrix4d htmat2 = Eigen::Matrix4d::Identity();
+    pose_transform.transform_pq2htmat(p2, q2, htmat2);
+
+    M5_LOGI("htmat2: %f, %f, %f, %f", htmat2(0, 0), htmat2(0, 1), htmat2(0, 2),
+            htmat2(0, 3));
+    M5_LOGI("htmat2: %f, %f, %f, %f", htmat2(1, 0), htmat2(1, 1), htmat2(1, 2),
+            htmat2(1, 3));
+    M5_LOGI("htmat2: %f, %f, %f, %f", htmat2(2, 0), htmat2(2, 1), htmat2(2, 2),
+            htmat2(2, 3));
+    M5_LOGI("htmat2: %f, %f, %f, %f", htmat2(3, 0), htmat2(3, 1), htmat2(3, 2),
+            htmat2(3, 3));
+
+    Eigen::Vector3d p3;
+    Eigen::Matrix3d q3;
 }
 
 void loop(void) {
