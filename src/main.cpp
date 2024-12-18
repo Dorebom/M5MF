@@ -12,8 +12,8 @@
 #include <M5Unified.h>
 //
 #include "Device/Safety/force_stop_tactile.hpp"
-#include "Device/comm/can_driver.hpp"
-#include "Device/comm/udp_driver.hpp"
+#include "Device/Comm/can_driver.hpp"
+#include "Device/Comm/udp_driver.hpp"
 //
 #include "Control/Dynamics/pose_transform.hpp"
 #include "Control/Dynamics/rigid_transform.hpp"

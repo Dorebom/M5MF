@@ -3,10 +3,10 @@
 #include <map>
 
 #include "Control/li_ctrl_mode.hpp"
-#include "Device/comm/can_driver.hpp"
-#include "Device/servo/cybergear_driver.hpp"
-#include "Device/servo/m5roller_driver.hpp"
-#include "Device/servo/st_servo_state.hpp"
+#include "Device/Comm/can_driver.hpp"
+#include "Device/Servo/cybergear_driver.hpp"
+#include "Device/Servo/m5roller_driver.hpp"
+#include "Device/Servo/st_servo_state.hpp"
 
 enum class CanServoType
 {
