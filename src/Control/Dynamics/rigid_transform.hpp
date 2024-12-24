@@ -7,7 +7,10 @@ struct DHParam
     double a;
     double alpha;
     double d;
-    double theta;
+    double theta_offset;
+
+    DHParam() : a(0.0), alpha(0.0), d(0.0), theta_offset(0.0) {
+    }
 };
 
 class RigidTransform {
@@ -19,17 +22,11 @@ private:
 public:
     RigidTransform(/* args */) {};
     ~RigidTransform() {};
+    //
     Eigen::Matrix4d rot_x(double aloha) {
         Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
         mat.block<3, 3>(0, 0) =
             (Eigen::AngleAxisd(aloha, Eigen::Vector3d::UnitX()))
-                .toRotationMatrix();
-        return mat;
-    };
-    Eigen::Matrix4d rot_y(double beta) {
-        Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
-        mat.block<3, 3>(0, 0) =
-            (Eigen::AngleAxisd(beta, Eigen::Vector3d::UnitY()))
                 .toRotationMatrix();
         return mat;
     };
@@ -40,14 +37,10 @@ public:
                 .toRotationMatrix();
         return mat;
     };
+    //
     Eigen::Matrix4d trn_x(double a) {
         Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
         mat(0, 3) = a;
-        return mat;
-    };
-    Eigen::Matrix4d trn_y(double b) {
-        Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
-        mat(1, 3) = b;
         return mat;
     };
     Eigen::Matrix4d trn_z(double c) {
@@ -77,18 +70,22 @@ public:
         //
         htmat_coef = htmat * rotz.inverse();
     };
-    void set_dhparam(double a, double alpha, double d) {
+    void set_dhparam(double a, double alpha, double d, double theta_offset) {
         dhparam_.a = a;
         dhparam_.alpha = alpha;
         dhparam_.d = d;
+        dhparam_.theta_offset = theta_offset;
         //
         htmat_coef = trn_x(a) * rot_x(alpha) * trn_z(d);
     };
+    void set_offset_theta(double theta_offset) {
+        dhparam_.theta_offset = theta_offset;
+    };
     //
     Eigen::Matrix4d get_htmat(double theta) {
-        return htmat_coef * rot_z(theta);
+        return htmat_coef * rot_z(theta + dhparam_.theta_offset);
     }
     Eigen::Matrix4d get_dhtmat(double theta) {
-        return htmat_coef * rot_dz(theta);
+        return htmat_coef * rot_dz(theta + dhparam_.theta_offset);
     }
 };
