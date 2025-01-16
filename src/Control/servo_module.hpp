@@ -3,7 +3,8 @@
 #include <map>
 
 // #include "Device/comm/can_driver.hpp"
-#include "Device/Servo/can_servo_driver.hpp"
+#include "Control/Device/can_device_driver.hpp"
+// #include "Device/Servo/can_servo_driver.hpp"
 #include "Device/Servo/st_servo_state.hpp"
 //
 #include "servo_def.hpp"
@@ -15,7 +16,8 @@
 class ServoModule {
 private:
     // std::map<uint8_t, ServoTypeInfo> servo_info_map_;
-    CanServoDriver can_servo_;
+    // CanServoDriver can_servo_;
+    CanDeviceDriver can_device_;
     BiquadFilter filter_[SERVO_NUM];
 
     // >> Data
@@ -42,4 +44,7 @@ public:
     void velocity_control(const LocalControlState& state);
     void torque_control(const LocalControlState& state);
     void change_ctrl_mode(const LocalControlState& state);
+
+    void request_ext_force_state();
+    void get_ext_force_state(ForceSensorState& state);
 };

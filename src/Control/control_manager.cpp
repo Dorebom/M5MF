@@ -11,6 +11,12 @@ void ControlManager::get_state() {
         local_state.act_joint_velocity[i] = servo_state[i].act_joint_velocity;
         local_state.act_joint_torque[i] = servo_state[i].act_joint_torque;
     }
+    ForceSensorState temp;
+    servo_.get_ext_force_state(temp);
+
+    local_state.act_mf_ext_torque[0] = temp.fx;
+    local_state.act_mf_ext_torque[1] = temp.fy;
+    local_state.act_mf_ext_torque[2] = temp.mz;
 }
 
 void ControlManager::change_data_size() {
@@ -53,6 +59,26 @@ void ControlManager::change_data_size() {
             break;
     }
     local_state.state_code.data_size = data_size;
+}
+
+void ControlManager::check_safety() {
+    // Check Safety
+    for (int i = 0; i < SERVO_NUM; i++) {
+        if (local_state.act_joint_position[i] >
+                SERVO_INFO.MAX_THRESHOLD_JOINT_POSITION[i] + 0.01 &&
+            local_state.act_joint_position[i] -
+                    prev_local_state.act_joint_position[i] >
+                0.01) {
+            local_state.state_code.is_force_stop = true;
+        } else if (local_state.act_joint_position[i] <
+                       SERVO_INFO.MIN_THRESHOLD_JOINT_POSITION[i] - 0.01 &&
+                   local_state.act_joint_position[i] -
+                           prev_local_state.act_joint_position[i] <
+                       -0.01) {
+            local_state.state_code.is_force_stop = true;
+        }
+    }
+    // NOTE: 速度とトルクは分散が大きいっぽいので、一旦実装から外す
 }
 
 bool ControlManager::initialize(CommCan* can_driver) {
@@ -111,9 +137,10 @@ void ControlManager::update() {
         cmd_executor();
         // 2. Get State
         get_state();
+        //
+        check_safety();
 
         // 3. Update State and Control Input
-
         // >> >> operate servo area
         if (local_state.state_code.is_force_stop ||
             !local_state.state_code.is_power_on) {
@@ -159,9 +186,17 @@ void ControlManager::update() {
                             local_state.ref_joint_torque[i];
                     }
                     //
-                    if (cmd_watchdog_counter > 10) {
+                    if (cmd_watchdog_counter > 5) {
                         for (int i = 0; i < SERVO_NUM; i++) {
-                            local_state.cmd_joint_torque[i] = 0.0;
+                            // local_state.cmd_joint_torque[i] = 0.0;
+
+                            if (std::abs(local_state.act_joint_velocity[i]) >
+                                3.0) {
+                                local_state.cmd_joint_torque[i] =
+                                    -1.0 * local_state.act_joint_velocity[i];
+                            } else {
+                                local_state.cmd_joint_torque[i] = 0.0;
+                            }
                         }
                     }
                     //
@@ -172,6 +207,7 @@ void ControlManager::update() {
             }
         }
         // << << end of operate servo area
+        servo_.request_ext_force_state();
 
         // 4. Send System
         set_control_state2stack();
@@ -187,6 +223,7 @@ void ControlManager::update() {
             M5_LOGE("ControlManager::update: Failed to connect servo");
         }
     }
+    prev_local_state = local_state;
     return;
 }
 
@@ -334,7 +371,9 @@ void ControlManager::cmd_executor() {
             default:
                 break;
         }
-        cmd_watchdog_counter++;
+        if (cmd_watchdog_counter < 100) {
+            cmd_watchdog_counter++;
+        }
     }
     return;
 }

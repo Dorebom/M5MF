@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "st_control_state.hpp"
 //
 #include "scara_def.hpp"

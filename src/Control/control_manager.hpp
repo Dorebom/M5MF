@@ -10,6 +10,7 @@
 #include "Control/st_control_cmd.hpp"
 #include "Control/st_control_state.hpp"
 // >> module
+#include "Control/servo_def.hpp"
 #include "Control/servo_module.hpp"
 #include "Device/Comm/can_driver.hpp"
 
@@ -18,17 +19,18 @@ private:
     // >> Module
     ServoModule servo_;
     // >> State
-    LocalControlState local_state;
+    LocalControlState local_state, prev_local_state;
     ControlState *state_;
     std::shared_ptr<NodeCmdStack> cmd_stack_;
     std::shared_ptr<NodeStateStack> state_stack_;
 
     // >> Data
     uint8_t cmd_watchdog_counter = 0;
-
+    const ServoInfo SERVO_INFO;
     // >> Function
     void get_state();
     void change_data_size();
+    void check_safety();
 
 public:
     ControlManager() {

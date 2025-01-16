@@ -10,12 +10,16 @@ void RobotKinematics::calc_p_and_R_from_prev_axis() {
 
 void RobotKinematics::calc_p_and_R_from_origin_axis() {
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T_from_origin_axis[0] = T;
+    pose_transform_.transform_htmat2pos_rotmat(
+        T_from_origin_axis[0], p_from_origin_axis[0], R_from_origin_axis[0]);
     for (int i = 1; i < tool_point_num_; i++) {
         T *= T_from_prev_axis[i];
         T_from_origin_axis[i] = T;
         pose_transform_.transform_htmat2pos_rotmat(T_from_origin_axis[i],
                                                    p_from_origin_axis[i],
                                                    R_from_origin_axis[i]);
+        // Joint J1 -> i = 1
     }
 }
 
@@ -45,35 +49,13 @@ void RobotKinematics::calc_dp_and_dR_from_prev_axis() {
     }
 }
 
-void RobotKinematics::calc_dR_from_origin_axis() {
-    Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
-    for (int i = 0; i < joint_num_; i++) {
-        for (int j = 0; j < i; j++) {
-            //
-            if (i == j) {
-                if (i == 0) {
-                    dR_from_origin_axis[j] = dR_from_prev_axis[j];
-                } else {
-                    dR_from_origin_axis[i * joint_num_ + j] =
-                        R_from_origin_axis[j - 1] * dR_from_prev_axis[j];
-                }
-            } else {
-                R = Eigen::Matrix3d::Identity();
-                for (int k = 0; k < i - j; k++) {
-                    R *= R_from_prev_axis[k + j + 1];
-                }
-                if (j == 0) {
-                    dR_from_origin_axis[i * joint_num_] =
-                        dR_from_prev_axis[0] * R;
-                } else {
-                    dR_from_origin_axis[i * joint_num_ + j] =
-                        R_from_origin_axis[j - 1] * dR_from_prev_axis[j] * R;
-                }
-            }
-        }
+void RobotKinematics::calc_RdR_from_origin_axis() {
+    Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
+    for (int i = 1; i < joint_num_; i++) {
+        RdR_from_origin_axis[i] = R * dR_from_prev_axis[i];
+        R = R_from_origin_axis[i];
     }
 }
-
 //
 
 void RobotKinematics::initialize(std::map<int, DHParam> dh_param_map) {
@@ -86,6 +68,16 @@ void RobotKinematics::initialize(std::map<int, DHParam> dh_param_map) {
 void RobotKinematics::update_state(Eigen::VectorXd joint_q) {
     for (int i = 0; i < joint_num_; i++) {
         q_[i] = joint_q[i];
+    }
+    calc_p_and_R_from_prev_axis();
+    calc_p_and_R_from_origin_axis();
+}
+
+void RobotKinematics::update_state(Eigen::VectorXd joint_q,
+                                   Eigen::VectorXd joint_dq) {
+    for (int i = 0; i < joint_num_; i++) {
+        q_[i] = joint_q[i];
+        dq_[i] = joint_dq[i];
     }
     calc_p_and_R_from_prev_axis();
     calc_p_and_R_from_origin_axis();
@@ -105,30 +97,33 @@ void RobotKinematics::calc_basic_Jacobian_matrix(
 void RobotKinematics::calc_time_derivative_of_basic_Jacobian_matrix(
     Eigen::MatrixXd& jacobian_matrix_dot) {
     calc_dp_and_dR_from_prev_axis();
-    calc_dR_from_origin_axis();
-    // 350Lから
-    Eigen::Matrix3d temp_ = Eigen::Matrix3d::Identity();
+    calc_RdR_from_origin_axis();  // calc {0}^R_{i-1}{i-1}^dR_{i}
+    //
     for (int i = 0; i < joint_num_; i++) {
-        // //temp_dpe
-        temp_dpe_[i] = p_from_prev_axis[i + 1];
-        for (int j = i + 1; j < joint_num_; j++) {
-            temp_ *= R_from_prev_axis[j];
-            temp_dpe_[i] = temp_ * p_from_prev_axis[j + 1];
-            //
-            dz_[j - 1] = dR_from_prev_axis[i] * temp_ *
-                         Eigen::Vector3d::UnitZ() * dq_[i];  // ここがおかしい
-        }
-        //
-
-        /*
-        jacobian_matrix_dot.block<3, 1>(0, i) =
-            z_from_origin_axis[i].cross(dp_from_prev_axis[i]);
-        jacobian_matrix_dot.block<3, 1>(3, i) = z_from_origin_axis[i];
-        for (int j = 0; j < joint_num_; j++) {
-            jacobian_matrix_dot.block<3, 1>(0, i) +=
-                dR_from_origin_axis[i * joint_num_ + j] *
-                pe_from_origin_axis[j];
-        }
-        */
+        dz_[i] = Eigen::Vector3d::Zero();
+        dpe_[i] = Eigen::Vector3d::Zero();
     }
+    Eigen::Matrix3d temp_m = Eigen::Matrix3d::Zero();
+    Eigen::Vector3d temp_v = Eigen::Vector3d::Zero();
+    // calc dz and dpe
+    for (int i = 0; i < joint_num_; i++) {
+        temp_m *= R_from_prev_axis[i];
+        temp_m += dq_[i] * dR_from_prev_axis[i];
+        dz_[i] = temp_m * Eigen::Vector3d::UnitZ();
+        temp_v = temp_m * p_from_prev_axis[i + 1];
+        for (int j = 0; j <= i; j++) {
+            dpe_[j] += temp_v;
+        }
+    }
+    // calc jacobian_matrix_dot
+    for (int i = 0; i < joint_num_; i++) {
+        jacobian_matrix_dot.block<3, 1>(0, i) =
+            dz_[i].cross(pe_from_origin_axis[i]) +
+            z_from_origin_axis[i].cross(dpe_[i]);
+        jacobian_matrix_dot.block<3, 1>(3, i) = dz_[i];
+    }
+}
+
+void RobotKinematics::calc_pdot_omegadot(Eigen::Vector3d& p_dot,
+                                         Eigen::Vector3d& omega_dot) {
 }

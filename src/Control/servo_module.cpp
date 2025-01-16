@@ -3,37 +3,37 @@
 bool ServoModule::connect_servo() {
     M5_LOGI("ServoModule::connect_servo: ");
     for (int i = 0; i < SERVO_NUM; i++) {
-        is_connected = can_servo_.stop_motor(i);
+        is_connected = can_device_.stop_motor(i);
     }
     //
     for (int i = 0; i < SERVO_NUM; i++) {
-        can_servo_.get_joint_state(i, servo_state_[i]);
+        can_device_.get_joint_state(i, servo_state_[i]);
     }
     //
     return is_connected;
 }
 
 void ServoModule::get_joint_state(int joint_id, ServoState& state) {
-    can_servo_.get_joint_state(joint_id, state);
+    can_device_.get_joint_state(joint_id, state);
 }
 
 void ServoModule::stop_motor() {
     for (int i = 0; i < SERVO_NUM; i++) {
-        can_servo_.stop_motor(i);
+        can_device_.stop_motor(i);
     }
 }
 
 void ServoModule::enable_motor(const LocalControlState& state) {
-    M5_LOGI("Act Pos: %f, %f, %f", state.act_joint_position[0],
-            state.act_joint_position[1], state.act_joint_position[2]);
+    // M5_LOGI("Act Pos: %f, %f, %f", state.act_joint_position[0],
+    //         state.act_joint_position[1], state.act_joint_position[2]);
 
     for (int i = 0; i < SERVO_NUM; i++) {
-        can_servo_.position_control(i, state.act_joint_position[i]);
-        can_servo_.velocity_control(i, 0.0);
-        can_servo_.current_control(i, 0.0);
+        can_device_.position_control(i, state.act_joint_position[i]);
+        can_device_.velocity_control(i, 0.0);
+        can_device_.current_control(i, 0.0);
     }
     for (int i = 0; i < SERVO_NUM; i++) {
-        can_servo_.enable_motor(i);
+        can_device_.enable_motor(i);
     }
 }
 
@@ -59,7 +59,7 @@ void ServoModule::position_control(const LocalControlState& state) {
         } else if (cmd < SERVO_INFO.MIN_THRESHOLD_JOINT_POSITION[i]) {
             cmd = SERVO_INFO.MIN_THRESHOLD_JOINT_POSITION[i];
         }
-        can_servo_.position_control(i, cmd);
+        can_device_.position_control(i, cmd);
     }
 }
 
@@ -91,7 +91,7 @@ void ServoModule::velocity_control(const LocalControlState& state) {
                   20.0;
         }
         // << SAFETY
-        can_servo_.velocity_control(i, cmd);
+        can_device_.velocity_control(i, cmd);
     }
 }
 
@@ -102,7 +102,7 @@ void ServoModule::torque_control(const LocalControlState& state) {
     bool is_over_position = false;
     bool is_over_velocity = false;
 
-    const double gain_pos_p = 10.0;
+    const double gain_pos_p = 20.0;
     const double gain_vel_p = 2.0;
     const double gain_vel_i = 0.021;
 
@@ -182,7 +182,7 @@ void ServoModule::torque_control(const LocalControlState& state) {
             cmd = SERVO_INFO.MIN_THRESHOLD_JOINT_TORQUE[i];
         }
         // << SAFETY
-        can_servo_.torque_control(i, cmd);
+        can_device_.torque_control(i, cmd);
     }
 }
 
@@ -194,23 +194,23 @@ void ServoModule::change_ctrl_mode(const LocalControlState& state) {
     switch (state.state_code.servo_ctrl_mode) {
         case CTRL_MODE_LIST::POSITION:
             for (int i = 0; i < SERVO_NUM; i++) {
-                can_servo_.position_control(i, state.act_joint_position[i]);
-                can_servo_.change_ctrl_mode(i,
-                                            state.state_code.servo_ctrl_mode);
+                can_device_.position_control(i, state.act_joint_position[i]);
+                can_device_.change_ctrl_mode(i,
+                                             state.state_code.servo_ctrl_mode);
             }
             break;
         case CTRL_MODE_LIST::VELOCITY:
             for (int i = 0; i < SERVO_NUM; i++) {
-                can_servo_.velocity_control(i, state.act_joint_velocity[i]);
-                can_servo_.change_ctrl_mode(i,
-                                            state.state_code.servo_ctrl_mode);
+                can_device_.velocity_control(i, state.act_joint_velocity[i]);
+                can_device_.change_ctrl_mode(i,
+                                             state.state_code.servo_ctrl_mode);
             }
             break;
         case CTRL_MODE_LIST::TORQUE:
             for (size_t i = 0; i < SERVO_NUM; i++) {
-                can_servo_.torque_control(i, state.act_joint_torque[i]);
-                can_servo_.change_ctrl_mode(i,
-                                            state.state_code.servo_ctrl_mode);
+                can_device_.torque_control(i, state.act_joint_torque[i]);
+                can_device_.change_ctrl_mode(i,
+                                             state.state_code.servo_ctrl_mode);
             }
             break;
         default:
@@ -218,6 +218,14 @@ void ServoModule::change_ctrl_mode(const LocalControlState& state) {
     }
     //
     prev_servo_ctrl_mode = state.state_code.servo_ctrl_mode;
+}
+
+void ServoModule::request_ext_force_state() {
+    can_device_.request_force_sensor_state(FORCE_SENSOR_CAN_ID);
+}
+
+void ServoModule::get_ext_force_state(ForceSensorState& state) {
+    can_device_.get_force_sensor_state(state);
 }
 
 ServoModule::ServoModule(/* args */) {
@@ -230,14 +238,16 @@ ServoModule::~ServoModule() {
 }
 
 void ServoModule::init(CommCan* can_driver) {
-    can_servo_.set_can_driver(can_driver);
-
+    can_device_.set_can_driver(can_driver);
+    // >> Servo
     for (int i = 0; i < SERVO_NUM; i++) {
-        can_servo_.register_servo(i, SERVO_INFO.can_id[i],
-                                  SERVO_INFO.servo_type[i]);
+        can_device_.register_servo(i, SERVO_INFO.can_id[i],
+                                   SERVO_INFO.servo_type[i]);
     }
 
     for (int i = 0; i < SERVO_NUM; i++) {
         filter_[i].set_param_lpf(1000, 100, 0.7);
     }
+    // >> Sensor
+    can_device_.register_force_sensor(FORCE_SENSOR_CAN_ID);
 }
