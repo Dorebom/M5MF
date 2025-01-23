@@ -14,6 +14,7 @@ private:
     // >> Function
     void forward_kinematics(double* q_state, double* p_state);
     void inverse_kinematics(double* p_state, double* q0_state, double* q_state);
+    void calc_jacobian(double* q_state, double* J);
 
 public:
     ScaraModule(/* args */) {

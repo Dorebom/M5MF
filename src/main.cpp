@@ -25,12 +25,12 @@
 #define COMM_RECV_TASK_PRIORITY   10  // 1
 #define CTRL_TASK_PRIORITY        20  // 2
 // thread time interval
-#define CTRL_TASK_TIME_INTERVAL      2   // 1
+#define CTRL_TASK_TIME_INTERVAL      10  // 1
 #define MAIN_TASK_TIME_INTERVAL      25  // 20
 #define COMM_RECV_TASK_TIME_INTERVAL 10
 // thread stack size
 #define MAIN_STACK_DEPTH      8192
-#define CTRL_STACK_DEPTH      8192
+#define CTRL_STACK_DEPTH      16384
 #define COMM_RECV_STACK_DEPTH 4096
 
 // Board type
@@ -61,7 +61,7 @@ BoardType board_type = BoardType::M5STACK_ATOMS3;
 //  UDP and LAN
 #define UDP_PORT_RECV 50001
 #define UDP_PORT_SEND 50002
-IPAddress destination_ip(192, 168, 8, 143);
+IPAddress destination_ip(192, 168, 8, 202);
 IPAddress ip(192, 168, 8, 217);
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x99};
 

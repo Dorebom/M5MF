@@ -6,6 +6,10 @@
  * Pose = [position, rotvec]
  */
 
+/*
+ * Pose = [position, rotvec]
+ */
+
 class PoseTransform {
 private:
 public:
@@ -13,8 +17,8 @@ public:
     ~PoseTransform() {};
 
     // htmatrix 4x4 -> pose 6x1 >> OK
-    void transform_htmat2pose(const Eigen::Matrix4d& htmat,
-                              Eigen::VectorXd& pose) {
+    static void transform_htmat2pose(const Eigen::Matrix4d& htmat,
+                                     Eigen::VectorXd& pose) {
         pose.block<3, 1>(0, 0) = htmat.block<3, 1>(0, 3);
         Eigen::Matrix3d R = htmat.block<3, 3>(0, 0);
 
@@ -47,8 +51,8 @@ public:
         }
     };
     // pose 6x1 -> htmatrix 4x4 >> OK
-    void transform_pose2htmat(const Eigen::VectorXd& pose,
-                              Eigen::Matrix4d& htmat) {
+    static void transform_pose2htmat(const Eigen::VectorXd& pose,
+                                     Eigen::Matrix4d& htmat) {
         Eigen::Vector3d p = pose.block<3, 1>(0, 0);
         Eigen::Vector3d q = pose.block<3, 1>(3, 0);
 
@@ -76,17 +80,17 @@ public:
         }
     };
     // htmatrix 4x4 -> position 3x1, rotvec 3x1 >> OK
-    void transform_htmat2pose(const Eigen::Matrix4d& htmat, Eigen::Vector3d& p,
-                              Eigen::Vector3d& q) {
+    static void transform_htmat2pose(const Eigen::Matrix4d& htmat,
+                                     Eigen::Vector3d& p, Eigen::Vector3d& q) {
         Eigen::VectorXd pose(6);
         transform_htmat2pose(htmat, pose);
         p = pose.block<3, 1>(0, 0);
         q = pose.block<3, 1>(3, 0);
     };
     // position 3x1, rotvec 3x1 -> htmatrix 4x4  >> OK
-    void transform_pose2htmat(const Eigen::Vector3d& p,
-                              const Eigen::Vector3d& q,
-                              Eigen::Matrix4d& htmat) {
+    static void transform_pose2htmat(const Eigen::Vector3d& p,
+                                     const Eigen::Vector3d& q,
+                                     Eigen::Matrix4d& htmat) {
         Eigen::VectorXd pose(6);
         pose.block<3, 1>(0, 0) = p;
         pose.block<3, 1>(3, 0) = q;
@@ -94,28 +98,44 @@ public:
     };
 
     // htmatrix 4x4 -> position 3x1, quaternion 4x1 >> OK
-    void transform_htmat2pq(const Eigen::Matrix4d& htmat, Eigen::Vector3d& p,
-                            Eigen::Vector4d& q) {
+    static void transform_htmat2pq(const Eigen::Matrix4d& htmat,
+                                   Eigen::Vector3d& p, Eigen::Vector4d& q) {
         p = htmat.block<3, 1>(0, 3);
         q = Eigen::Quaterniond(htmat.block<3, 3>(0, 0)).coeffs();
     };
     // position 3x1, quaternion 4x1 -> htmatrix 4x4 >> OK
-    void transform_pq2htmat(const Eigen::Vector3d& p, const Eigen::Vector4d& q,
-                            Eigen::Matrix4d& htmat) {
+    static void transform_pq2htmat(const Eigen::Vector3d& p,
+                                   const Eigen::Vector4d& q,
+                                   Eigen::Matrix4d& htmat) {
         htmat.block<3, 1>(0, 3) = p;
         htmat.block<3, 3>(0, 0) = Eigen::Quaterniond(q).toRotationMatrix();
     };
     // htmat 4x4 -> position 3x1, rotation 3x3  >> OK
-    void transform_htmat2pos_rotmat(const Eigen::Matrix4d& htmat,
-                                    Eigen::Vector3d& p, Eigen::Matrix3d& q) {
+    static void transform_htmat2pos_rotmat(const Eigen::Matrix4d& htmat,
+                                           Eigen::Vector3d& p,
+                                           Eigen::Matrix3d& q) {
         p = htmat.block<3, 1>(0, 3);
         q = htmat.block<3, 3>(0, 0);
     };
     // position 3x1, rotation 3x3 -> htmat 4x4  >> OK
-    void transform_pos_rotmat2htmat(const Eigen::Vector3d& p,
-                                    const Eigen::Matrix3d& q,
-                                    Eigen::Matrix4d& htmat) {
+    static void transform_pos_rotmat2htmat(const Eigen::Vector3d& p,
+                                           const Eigen::Matrix3d& q,
+                                           Eigen::Matrix4d& htmat) {
         htmat.block<3, 1>(0, 3) = p;
         htmat.block<3, 3>(0, 0) = q;
+    };
+    static double deg2rad(double deg) {
+        return deg * EIGEN_PI / 180.0;
+    };
+    static double rad2deg(double rad) {
+        return rad * 180.0 / EIGEN_PI;
+    };
+    static void transform_rotmat2rotvec(const Eigen::Matrix3d& R,
+                                        Eigen::Vector3d& q) {
+        Eigen::VectorXd pose(6);
+        Eigen::Matrix4d htmat = Eigen::Matrix4d::Identity();
+        htmat.block<3, 3>(0, 0) = R;
+        transform_htmat2pose(htmat, pose);
+        q = pose.block<3, 1>(3, 0);
     };
 };

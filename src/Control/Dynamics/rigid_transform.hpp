@@ -50,7 +50,7 @@ public:
     };
     //
     Eigen::Matrix4d rot_dz(double gamma) {
-        Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
+        Eigen::Matrix4d mat = Eigen::Matrix4d::Zero();
         mat(0, 0) = -sin(gamma);
         mat(0, 1) = -cos(gamma);
         mat(1, 0) = cos(gamma);
@@ -61,10 +61,9 @@ public:
     void set_dhparam(Eigen::Vector3d pos, Eigen::Matrix3d rot_mat,
                      double theta) {
         // htmat_coef
-        Eigen::Matrix4d htmat;
+        Eigen::Matrix4d htmat = Eigen::Matrix4d::Identity();
         htmat.block<3, 3>(0, 0) = rot_mat;
         htmat.block<3, 1>(0, 3) = pos;
-        htmat(3, 3) = 1.0;
         //
         Eigen::Matrix4d rotz = rot_z(theta);
         //

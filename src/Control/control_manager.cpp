@@ -3,20 +3,53 @@
 void ControlManager::get_state() {
     // Timestamp
     local_state.state_code.timestamp = micros();
-
+    // Servo State
     ServoState servo_state[SERVO_NUM];
+    Eigen::VectorXd q = Eigen::VectorXd::Zero(SERVO_NUM);
+    Eigen::VectorXd dq = Eigen::VectorXd::Zero(SERVO_NUM);
+    Eigen::VectorXd ddq = Eigen::VectorXd::Zero(SERVO_NUM);
+
     for (int i = 0; i < SERVO_NUM; i++) {
         servo_.get_joint_state(i, servo_state[i]);
         local_state.act_joint_position[i] = servo_state[i].act_joint_position;
         local_state.act_joint_velocity[i] = servo_state[i].act_joint_velocity;
         local_state.act_joint_torque[i] = servo_state[i].act_joint_torque;
+        q(i) = local_state.act_joint_position[i];
+        dq(i) = local_state.act_joint_velocity[i];
+        ddq(i) = (local_state.act_joint_velocity[i] -
+                  prev_local_state.act_joint_velocity[i]) /
+                 0.01;
     }
+    // MF State(scara)
+    scara_.update_state(local_state);  // FK q -> p
+    // Robot Kinematics
+
+    robot_kinematics_.update_state(q);
+    std::tie(p_from_prev_axis, R_from_prev_axis) =
+        robot_kinematics_.get_p_and_R_from_prev_axis();
+    // Ext Force
     ForceSensorState temp;
     servo_.get_ext_force_state(temp);
-
     local_state.act_mf_ext_torque[0] = temp.fx;
     local_state.act_mf_ext_torque[1] = temp.fy;
     local_state.act_mf_ext_torque[2] = temp.mz;
+    // Robot Dynamics
+    robot_dynamics_.update_state(
+        (const Eigen::VectorXd)dq, (const Eigen::VectorXd)ddq,
+        (const std::vector<Eigen::Matrix3d>)R_from_prev_axis);
+
+    Eigen::Vector3d ext_f_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d ext_n_ = Eigen::Vector3d::Zero();
+    ext_f_(0) = local_state.act_mf_ext_torque[0];
+    ext_f_(1) = local_state.act_mf_ext_torque[1];
+    ext_n_(2) = local_state.act_mf_ext_torque[2];
+
+    robot_dynamics_.calc_M_h_and_g(
+        (const Eigen::VectorXd)dq, (const Eigen::VectorXd)ddq,
+        (const std::vector<Eigen::Matrix3d>)R_from_prev_axis,
+        Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+        Eigen::Vector3d::Zero(), (const Eigen::Vector3d)ext_f_,
+        (const Eigen::Vector3d)ext_n_, M, h, g);
 }
 
 void ControlManager::change_data_size() {
@@ -206,8 +239,10 @@ void ControlManager::update() {
                     break;
             }
         }
-        // << << end of operate servo area
+// << << end of operate servo area
+#ifdef ENABLE_EXT_FORCE
         servo_.request_ext_force_state();
+#endif
 
         // 4. Send System
         set_control_state2stack();

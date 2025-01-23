@@ -2,11 +2,17 @@
 
 #include <ArduinoEigen.h>
 
+#include <iostream>
 #include <map>
+#include <tuple>
 #include <vector>
 
-#include "Control/Dynamics/pose_transform.hpp"
-#include "Control/Dynamics/rigid_transform.hpp"
+#include "pose_transform.hpp"
+#include "rigid_transform.hpp"
+
+/*
+ * 一旦、ロボットベース = ワールド座標原点の想定で作る
+ */
 
 class RobotKinematics {
 private:
@@ -39,15 +45,26 @@ private:
     std::vector<Eigen::Vector3d>
         temp_dpe_;  // {0}^dpe_iの右辺  i = 0, 1, ..., n-1; n = joint num
     std::vector<Eigen::Vector3d> dpe_;
+
     //
-    Eigen::Vector3d tool_pos;
-    Eigen::Matrix3d tool_rot;
+    Eigen::Matrix4d robot_base_htmat_;
+    Eigen::Vector3d robot_base_pos_;
+    Eigen::Matrix3d robot_base_rot_;
+    //
+    Eigen::Vector3d tool_pos;  // ツールベースからツールポイントまでの位置
+    Eigen::Matrix3d tool_rot;  // ツールベースからツールポイントまでの姿勢
+    Eigen::Vector3d tool_base_pos_;  // 最終軸からツールベースまでの位置(不変量)
+    Eigen::Matrix3d tool_base_rot_;  // 最終軸からツールベースまでの姿勢(不変量)
 
     PoseTransform pose_transform_;
 
     // >> Function
     void calc_p_and_R_from_prev_axis();
     void calc_p_and_R_from_origin_axis();
+    Eigen::RowVectorXd calc_error_pose(Eigen::Vector3d src_pos,
+                                       Eigen::Matrix3d src_rotmat,
+                                       Eigen::Vector3d dst_pos,
+                                       Eigen::Matrix3d dst_rotmat);
     void calc_z_from_origin_axis();
     void calc_pe_from_origin_axis();
     void calc_dp_and_dR_from_prev_axis();
@@ -56,6 +73,11 @@ private:
 public:
     RobotKinematics(int joint_num)
         : joint_num_(joint_num), tool_point_num_(joint_num + 1) {
+        //
+        robot_base_htmat_ = Eigen::Matrix4d::Identity();
+        robot_base_pos_ = Eigen::Vector3d::Zero();
+        robot_base_rot_ = Eigen::Matrix3d::Identity();
+        //
         q_ = Eigen::VectorXd::Zero(tool_point_num_);
         dq_ = Eigen::VectorXd::Zero(tool_point_num_);
         //
@@ -116,25 +138,42 @@ public:
      *  >>(2.3 OP) calc_time_derivative_of_Jacobian_matrix
      *     Need: update q and dq
      *  >> 2.4 calc_FK
+     *     Need: update q
+     *  >> 2.5 calc p_dot, omega
      */
-    void initialize(std::map<int, DHParam> dh_param_map);
+    void initialize(std::map<int, DHParam> dh_param_map,
+                    Eigen::Vector3d tool_base_pos,
+                    Eigen::Matrix3d tool_base_rot);
+    void set_tool_point(Eigen::Vector3d pos, Eigen::Matrix3d rot);
+    void set_robot_base(Eigen::Vector3d pos, Eigen::Matrix3d rot);
     //
     void update_state(Eigen::VectorXd joint_q);
+    void update_state(Eigen::VectorXd joint_q, Eigen::Vector3d robot_base_pos,
+                      Eigen::Matrix3d robot_base_rot);
     void update_state(Eigen::VectorXd joint_q, Eigen::VectorXd joint_dq);
     //
     void calc_basic_Jacobian_matrix(Eigen::MatrixXd& jacobian_matrix);
     void calc_time_derivative_of_basic_Jacobian_matrix(
         Eigen::MatrixXd& jacobian_matrix_dot);
-    void calc_FK(Eigen::Vector3d& pos, Eigen::Matrix3d& rot);
-    void calc_FK(Eigen::VectorXd& q, Eigen::Vector3d& pos,
-                 Eigen::Matrix3d& rot);
-    void calc_IK(Eigen::Vector3d& pos, Eigen::Matrix3d& rot,
-                 Eigen::VectorXd& q0, Eigen::VectorXd& q);
-    void calc_pdot_omegadot(Eigen::Vector3d& p_dot, Eigen::Vector3d& omega_dot);
+    void calc_FK_from_world(Eigen::Vector3d& pos, Eigen::Matrix3d& rot);
+    void calc_FK_from_world(Eigen::VectorXd& q, Eigen::Vector3d& pos,
+                            Eigen::Matrix3d& rot);
+    void calc_pdot_omegadot(Eigen::Vector3d& p_dot, Eigen::Vector3d& omega,
+                            Eigen::MatrixXd& jacobian_matrix);
 
     void get_tool_pos_rot_from_origin_axis(Eigen::Vector3d& pos,
                                            Eigen::Matrix3d& rot) {
         pos = tool_pos;
         rot = tool_rot;
     }
+    std::tuple<std::vector<Eigen::Vector3d>, std::vector<Eigen::Matrix3d>>
+    get_p_and_R_from_origin_axis() {
+        return std::make_tuple(p_from_origin_axis, R_from_origin_axis);
+    }
+    std::tuple<std::vector<Eigen::Vector3d>, std::vector<Eigen::Matrix3d>>
+    get_p_and_R_from_prev_axis() {
+        return std::make_tuple(p_from_origin_axis, R_from_origin_axis);
+    }
+    std::tuple<std::vector<Eigen::Vector3d>, std::vector<Eigen::Matrix3d>>
+    calc_p_and_R_from_prev_axis(Eigen::VectorXd q);
 };
